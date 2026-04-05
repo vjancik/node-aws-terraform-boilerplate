@@ -34,6 +34,11 @@ resource "aws_iam_role" "github_actions" {
       }
     ]
   })
+
+  tags = {
+    github_org  = var.github_org
+    github_repo = var.github_repo
+  }
 }
 
 # Policy: ECR login + push to backend repo only

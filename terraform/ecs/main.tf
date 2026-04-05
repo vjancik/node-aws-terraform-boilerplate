@@ -21,7 +21,7 @@ data "terraform_remote_state" "shared" {
 module "ecs" {
   source = "../modules/ecs"
 
-  name               = "node-tf-ecs"
+  name               = var.name
   aws_region         = var.aws_region
   vpc_id             = data.terraform_remote_state.shared.outputs.vpc_id
   public_subnet_ids  = data.terraform_remote_state.shared.outputs.public_subnet_ids
