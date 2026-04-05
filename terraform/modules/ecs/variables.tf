@@ -29,8 +29,9 @@ variable "domain_name" {
 }
 
 variable "backend_image" {
-  description = "Full ECR image URI for the backend (e.g. 123456.dkr.ecr.us-east-1.amazonaws.com/backend:sha-abc)"
+  description = "Override image URI. If null, preserves the currently deployed image. Set explicitly to deploy a specific image."
   type        = string
+  default     = null
 }
 
 variable "container_port" {

@@ -133,6 +133,19 @@ resource "aws_acm_certificate_validation" "main" {
   certificate_arn = aws_acm_certificate.main.arn
 }
 
+data "aws_ecs_task_definition" "backend" {
+  task_definition = "${var.name}-backend"
+}
+
+locals {
+  # Use backend_image override if set, otherwise preserve the currently deployed image.
+  # Falls back to null (error) only on first apply when no task definition exists yet — supply backend_image to bootstrap.
+  image = coalesce(
+    var.backend_image,
+    try(jsondecode(data.aws_ecs_task_definition.backend.container_definitions)[0].image, null)
+  )
+}
+
 # ECS Task Definition
 resource "aws_ecs_task_definition" "backend" {
   family                   = "${var.name}-backend"
@@ -151,15 +164,20 @@ resource "aws_ecs_task_definition" "backend" {
   container_definitions = jsonencode([
     {
       name      = "backend"
-      image     = var.backend_image
+      image     = local.image
       essential = true
 
       portMappings = [
         {
           containerPort = var.container_port
+          hostPort      = var.container_port
           protocol      = "tcp"
         }
       ]
+
+      mountPoints    = []
+      systemControls = []
+      volumesFrom    = []
 
       environment = [
         { name = "NODE_ENV", value = "production" },

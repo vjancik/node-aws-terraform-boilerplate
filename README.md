@@ -158,10 +158,28 @@ terraform -chdir=terraform/ecs apply
 After applying `shared`, copy the `github_actions_role_arn` output to your GitHub repository secrets as `AWS_ROLE_ARN`.
 
 After applying `ecs`, the outputs include:
-- `alb_dns_name` — the ALB DNS name to use as a CNAME target in Cloudflare
-- `acm_validation_records` — CNAME records to add in Cloudflare to validate the ACM certificate
+- `alb_dns_name` — the ALB DNS name to use as a CNAME target in your domain DNS provider
+- `acm_validation_records` — CNAME records to add in your domain DNS provider to validate the ACM certificate
 
-Add both records in Cloudflare, then wait for ACM validation to complete (usually 1–2 minutes).
+Add both records in your domain DNS provider, then wait for ACM validation to complete (usually 1–2 minutes).
+
+#### ACM validation deadlock
+
+`terraform apply` will block indefinitely on `aws_acm_certificate_validation` until the DNS CNAME is in place — but the CNAME values are only printed as outputs after apply completes. To break the deadlock:
+
+1. Interrupt the apply with `Ctrl+C`
+2. Fetch the validation records directly from the AWS CLI:
+
+```bash
+aws acm list-certificates --region us-east-1
+aws acm describe-certificate \
+  --certificate-arn <arn> \
+  --region us-east-1 \
+  --query "Certificate.DomainValidationOptions"
+```
+
+3. Add the CNAME record to your domain DNS provider (set proxy status to **DNS only**, not proxied)
+4. Re-run `terraform -chdir=terraform/ecs apply` — it will resume and complete once ACM confirms validation
 
 ### Tear down
 
