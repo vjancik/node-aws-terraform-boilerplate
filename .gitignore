@@ -12,6 +12,9 @@ dist/
 .env.*
 !.env.example
 
+# load testing results
+scripts/load-testing/results/*.json
+
 # terraform
 terraform/**/.terraform/
 terraform/**/.terraform.lock.hcl
