@@ -51,3 +51,16 @@ resource "aws_ecr_lifecycle_policy" "backend" {
     ]
   })
 }
+
+locals {
+  azs = ["${var.aws_region}a", "${var.aws_region}b"]
+}
+
+module "networking" {
+  source = "../modules/networking"
+
+  name                 = "node-aws-terraform-boilerplate"
+  azs                  = local.azs
+  public_subnet_cidrs  = [for i, az in local.azs : cidrsubnet("10.0.0.0/16", 8, i)]
+  private_subnet_cidrs = [for i, az in local.azs : cidrsubnet("10.0.0.0/16", 8, i + 128)]
+}

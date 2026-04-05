@@ -108,20 +108,33 @@ Verify the correct account is active:
 aws sts get-caller-identity
 ```
 
+### Layout
+
+Terraform is split into independent root modules. Apply them in order:
+
+```
+terraform/
+  shared/   # VPC, ECR, GitHub OIDC IAM — apply first, never destroy while other layers exist
+  ecs/      # ECS Fargate cluster, ALB, ACM, auto scaling — depends on shared/
+  modules/  # reusable modules, not applied directly
+```
+
 ### Configure variables
 
+Each root module has its own `terraform.tfvars`. Copy the example and fill in the values:
+
 ```bash
-cd terraform
-cp terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars with your github_org and github_repo
+cp terraform/shared/terraform.tfvars.example terraform/shared/terraform.tfvars
+cp terraform/ecs/terraform.tfvars.example terraform/ecs/terraform.tfvars
 ```
 
 ### Init
 
-Run once after cloning, or after adding new providers/modules:
+Run once per module after cloning, or after adding new providers/modules:
 
 ```bash
-terraform init
+terraform -chdir=terraform/shared init
+terraform -chdir=terraform/ecs init
 ```
 
 ### Plan (dry run)
@@ -129,25 +142,34 @@ terraform init
 Preview what Terraform will create, change, or destroy — no changes are applied:
 
 ```bash
-terraform plan
+terraform -chdir=terraform/shared plan
+terraform -chdir=terraform/ecs plan
 ```
 
 ### Apply
 
-Create or update infrastructure:
+Apply shared infrastructure first, then ECS:
 
 ```bash
-terraform apply
+terraform -chdir=terraform/shared apply
+terraform -chdir=terraform/ecs apply
 ```
 
-Terraform will print the plan and prompt for confirmation before making any changes. After a successful apply, the ECR repository URL and GitHub Actions IAM role ARN are printed as outputs. Copy the role ARN to your GitHub repository secrets as `AWS_ROLE_ARN`.
+After applying `shared`, copy the `github_actions_role_arn` output to your GitHub repository secrets as `AWS_ROLE_ARN`.
+
+After applying `ecs`, the outputs include:
+- `alb_dns_name` — the ALB DNS name to use as a CNAME target in Cloudflare
+- `acm_validation_records` — CNAME records to add in Cloudflare to validate the ACM certificate
+
+Add both records in Cloudflare, then wait for ACM validation to complete (usually 1–2 minutes).
 
 ### Tear down
 
-Destroy all managed resources:
+Destroy in reverse order — always destroy ECS before shared:
 
 ```bash
-terraform destroy
+terraform -chdir=terraform/ecs destroy
+terraform -chdir=terraform/shared destroy
 ```
 
 ## Backend endpoints

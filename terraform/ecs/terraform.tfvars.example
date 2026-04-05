@@ -1,0 +1,2 @@
+domain_name   = "api.yourdomain.com"
+backend_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/backend:sha-abc123"
