@@ -1,0 +1,10 @@
+{
+  "name": "@repo/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "echo \"web: no dev server configured\"",
+    "build": "echo \"web: no build configured\"",
+    "lint": "echo \"web: no lint configured\""
+  }
+}

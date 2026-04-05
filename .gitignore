@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# build outputs
+dist/
+
+# turbo cache
+.turbo/
+
+# env files
+.env
+.env.*
+!.env.example
