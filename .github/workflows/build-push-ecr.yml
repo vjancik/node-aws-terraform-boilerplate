@@ -8,13 +8,22 @@ permissions:
   id-token: write   # required for OIDC
   contents: read
 
+env:
+  SHA_LENGTH: 7
+
 jobs:
   build-push:
     runs-on: ubuntu-latest
+    outputs:
+      short-sha: ${{ steps.sha.outputs.short }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Get short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::${{ env.SHA_LENGTH }}}" >> $GITHUB_OUTPUT
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6
@@ -40,6 +49,8 @@ jobs:
           tags: |
             type=sha,prefix=sha-,format=short
             type=raw,value=latest,enable={{is_default_branch}}
+        env:
+          DOCKER_METADATA_SHORT_SHA_LENGTH: ${{ env.SHA_LENGTH }}
 
       - name: Build and push
         id: build-push
@@ -85,7 +96,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: backend
-          image: ${{ steps.ecr-login.outputs.registry }}/backend:sha-${{ github.sha }}
+          image: ${{ steps.ecr-login.outputs.registry }}/backend:sha-${{ needs.build-push.outputs.short-sha }}
 
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2

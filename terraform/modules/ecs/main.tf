@@ -198,11 +198,13 @@ resource "aws_ecs_task_definition" "backend" {
 
 # ECS Service
 resource "aws_ecs_service" "backend" {
-  name            = "${var.name}-backend"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.backend.arn
-  desired_count   = var.min_tasks
-  launch_type     = "FARGATE"
+  name                               = "${var.name}-backend"
+  cluster                            = aws_ecs_cluster.main.id
+  task_definition                    = aws_ecs_task_definition.backend.arn
+  desired_count                      = var.min_tasks
+  launch_type                        = "FARGATE"
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
 
   network_configuration {
     subnets          = var.private_subnet_ids
