@@ -7,9 +7,10 @@ RUN corepack enable
 
 # Install all deps and build
 FROM base AS build
+ARG TARGETARCH
 COPY . /app
 WORKDIR /app
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --filter @repo/backend...
+RUN --mount=type=cache,id=pnpm-${TARGETARCH},target=/pnpm/store pnpm install --frozen-lockfile --filter @repo/backend...
 RUN pnpm --filter @repo/backend build
 RUN pnpm deploy --filter @repo/backend --prod --legacy /prod/backend
 

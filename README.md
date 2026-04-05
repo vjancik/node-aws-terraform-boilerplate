@@ -80,6 +80,76 @@ pnpm turbo run <task>                        # run a task across all packages
 pnpm turbo run <task> --filter=@repo/backend # run a task in one package only
 ```
 
+## Deployment
+
+Infrastructure is managed with Terraform in the `terraform/` directory. All commands below should be run from that directory.
+
+### Prerequisites
+
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) >= 2
+- [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
+
+### AWS authentication
+
+Terraform uses the AWS CLI credentials chain. Log in before running any Terraform commands:
+
+```bash
+# SSO (recommended)
+aws sso login --profile <your-profile>
+export AWS_PROFILE=<your-profile>
+
+# Or with an access key
+aws configure
+```
+
+Verify the correct account is active:
+
+```bash
+aws sts get-caller-identity
+```
+
+### Configure variables
+
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# edit terraform.tfvars with your github_org and github_repo
+```
+
+### Init
+
+Run once after cloning, or after adding new providers/modules:
+
+```bash
+terraform init
+```
+
+### Plan (dry run)
+
+Preview what Terraform will create, change, or destroy — no changes are applied:
+
+```bash
+terraform plan
+```
+
+### Apply
+
+Create or update infrastructure:
+
+```bash
+terraform apply
+```
+
+Terraform will print the plan and prompt for confirmation before making any changes. After a successful apply, the ECR repository URL and GitHub Actions IAM role ARN are printed as outputs. Copy the role ARN to your GitHub repository secrets as `AWS_ROLE_ARN`.
+
+### Tear down
+
+Destroy all managed resources:
+
+```bash
+terraform destroy
+```
+
 ## Backend endpoints
 
 | Method | Path | Description |
