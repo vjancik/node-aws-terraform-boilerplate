@@ -19,6 +19,20 @@ describe('AppController', () => {
     await app.close();
   });
 
+  it('GET /fib/10 → 200 55', () => {
+    return request(app.getHttpServer())
+      .get('/fib/10')
+      .expect(200)
+      .expect('55');
+  });
+
+  it('GET /fib/99 → capped at fib(42)', () => {
+    return request(app.getHttpServer())
+      .get('/fib/99')
+      .expect(200)
+      .expect(String(267914296));
+  });
+
   it('GET /livez → 200 Ok', () => {
     return request(app.getHttpServer())
       .get('/livez')

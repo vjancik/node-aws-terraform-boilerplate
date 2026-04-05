@@ -181,7 +181,8 @@ resource "aws_ecs_task_definition" "backend" {
 
       environment = [
         { name = "NODE_ENV", value = "production" },
-        { name = "PORT", value = tostring(var.container_port) }
+        { name = "PORT", value = tostring(var.container_port) },
+        { name = "NO_COLOR", value = "1" }
       ]
 
       logConfiguration = {
