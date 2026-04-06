@@ -51,13 +51,15 @@ jobs:
         uses: actions/cache@v5
         with:
           path: pnpm-store-amd64
-          key: pnpm-store-amd64
+          key: pnpm-store-amd64-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-amd64-
 
       - name: Cache pnpm store (arm64)
         uses: actions/cache@v5
         with:
           path: pnpm-store-arm64
-          key: pnpm-store-arm64
+          key: pnpm-store-arm64-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-arm64-
 
       - name: Restore pnpm store into BuildKit
         uses: reproducible-containers/buildkit-cache-dance@v3
