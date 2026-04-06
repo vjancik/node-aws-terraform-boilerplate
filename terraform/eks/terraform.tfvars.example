@@ -1,0 +1,3 @@
+github_org  = "your-github-username"
+github_repo = "node-aws-terraform-boilerplate"
+domain_name = "api.yourdomain.com"

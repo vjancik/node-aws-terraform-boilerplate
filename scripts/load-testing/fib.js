@@ -4,6 +4,7 @@ import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.2/index.js';
 
 // Target URL — set via K6_TARGET env var
 if (!__ENV.K6_TARGET) throw new Error('K6_TARGET env var is required');
+// Live dashboard — run with K6_WEB_DASHBOARD=true to open at http://localhost:5665
 const TARGET = __ENV.K6_TARGET;
 
 // Fibonacci n to compute — higher = more CPU load per request
@@ -34,7 +35,7 @@ export default function () {
 
 export function handleSummary(data) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `results/fib-${timestamp}.json`;
+  const filename = `scripts/load-testing/results/fib-${timestamp}.json`;
 
   return {
     stdout: textSummary(data, { indent: '  ', enableColors: true }),

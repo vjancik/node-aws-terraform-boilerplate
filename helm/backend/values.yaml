@@ -1,0 +1,32 @@
+image:
+  repository: ""  # set via --set image.repository=<ecr-url>/backend
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+service:
+  port: 3000
+
+ingress:
+  enabled: true
+  # ACM certificate ARN — output from terraform/eks
+  certificateArn: ""
+  # Host for the ALB routing rule (e.g. api.yourdomain.com)
+  host: ""
+
+hpa:
+  minReplicas: 2
+  maxReplicas: 20
+  # Scale out when average CPU across pods exceeds 60%
+  cpuTargetPercent: 60
+
+resources:
+  requests:
+    cpu: "250m"
+    memory: "128Mi"
+  limits:
+    cpu: "1"
+    memory: "256Mi"
+
+env:
+  NODE_ENV: production
+  NO_COLOR: "1"

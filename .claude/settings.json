@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(pnpm --filter @repo/backend test)"
+      "Bash(pnpm --filter @repo/backend test)",
+      "WebFetch(domain:grafana.com)"
     ]
   }
 }

@@ -6,7 +6,9 @@
     "dev": "turbo run dev",
     "start": "turbo run start",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "helm:lint": "helm lint helm/*",
+    "tf:validate": "terraform -chdir=terraform/shared validate && terraform -chdir=terraform/ecs validate && terraform -chdir=terraform/eks validate"
   },
   "devDependencies": {
     "turbo": "latest"

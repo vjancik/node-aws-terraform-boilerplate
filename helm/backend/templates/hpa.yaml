@@ -1,0 +1,38 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}
+  minReplicas: {{ .Values.hpa.minReplicas }}
+  maxReplicas: {{ .Values.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.hpa.cpuTargetPercent }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 15
+      policies:
+        # Below 10 pods: double every 15s for fast ramp-up
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        # Above 10 pods: add 4 at a time to avoid overshooting
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      # HPA picks whichever policy adds fewer pods — doubling wins at low counts, +4 cap kicks in above 8
+      selectPolicy: Min
+    scaleDown:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
