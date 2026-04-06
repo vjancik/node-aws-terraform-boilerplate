@@ -1,5 +1,40 @@
 # Kubernetes Notes
 
+## Node autoscaling — Karpenter vs alternatives
+
+This project uses Karpenter for EKS node autoscaling. Here's how it compares to the alternatives:
+
+### Karpenter (what we use)
+- Watches for `Pending` pods and provisions nodes in ~30s
+- Picks the cheapest instance type from a broad pool at launch time — including spot pricing
+- Bin-packs pods optimally across instance types and AZs
+- Consolidates underutilized nodes automatically
+- AWS-specific (Azure support exists but lags)
+- GA since 2023 — newer, less battle-tested than Cluster Autoscaler
+
+### Cluster Autoscaler
+- The traditional approach, been around since 2016
+- Works by scaling predefined Auto Scaling Groups up/down
+- Slower (~3-5 min vs ~30s) — polls ASG on a timer rather than watching pod events
+- Instance types fixed at ASG definition time — no dynamic selection
+- Multi-cloud — works on GKE, AKS, EKS with provider plugins
+- Vastly more documentation and production mileage
+
+### EKS Auto Mode / GKE Autopilot
+- Fully managed by the cloud provider — no Karpenter or Cluster Autoscaler to configure
+- AWS/GCP handle node provisioning, AMI updates, bin-packing automatically
+- Less control, potentially higher cost (management premium)
+- Best for teams that want zero node operational overhead
+
+### Static node groups
+- No autoscaling — fixed number of nodes, scale manually when needed
+- Simplest possible setup, surprisingly common for small stable workloads
+- No cold-start latency, predictable cost
+- Wasteful under variable load
+
+### When Karpenter is worth it
+Karpenter pays off when you have variable load and care about cost — the spot instance bin-packing alone can cut node costs by 60-70%. For a fixed, stable workload, static nodes or Cluster Autoscaler are simpler and equally effective.
+
 ## Karpenter debugging
 
 If nodes aren't provisioning after deploy, check the Karpenter controller logs first — IAM `AccessDenied` errors and scheduling failures show up immediately:

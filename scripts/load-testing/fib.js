@@ -11,17 +11,14 @@ const TARGET = __ENV.K6_TARGET;
 // Override with FIB_N env var if needed.
 const FIB_N = __ENV.FIB_N || '38';
 
-// 30-minute run designed to observe ECS autoscaling behaviour end-to-end.
+// 30-minute run designed to observe autoscaling behaviour end-to-end.
 //
 // Timeline (approximate):
 //   0:00 –  2:00  Warm-up ramp — light load, baseline latency
 //   2:00 –  5:00  Ramp to full load — CPU climbs past 60% target, triggers scale-out
-//   5:00 – 25:00  Sustained full load — watch new tasks register, latency improve
-//  25:00 – 27:00  Ramp down — CPU drops, scale-in cooldown begins (300s)
-//  27:00 – 30:00  Idle hold — confirm scale-in fires (tasks reduce back to min)
-//
-// Scale-out cooldown: 60s  →  new tasks should appear ~1–3 min into full load.
-// Scale-in cooldown:  300s →  tasks should reduce ~5 min after ramp-down.
+//   5:00 – 25:00  Sustained full load — watch new pods/tasks register, latency improve
+//  25:00 – 27:00  Ramp down — CPU drops, scale-in cooldown begins
+//  27:00 – 30:00  Idle hold — confirm scale-in fires
 export const options = {
   stages: [
     { duration: '2m',  target: 5  },  // warm-up
@@ -46,7 +43,7 @@ export default function () {
 
 export function handleSummary(data) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `scripts/load-testing/results/fib-ecs-${timestamp}.json`;
+  const filename = `scripts/load-testing/results/fib-${timestamp}.json`;
 
   return {
     stdout: textSummary(data, { indent: '  ', enableColors: true }),

@@ -12,9 +12,8 @@ dist/
 .env.*
 !.env.example
 
-# load testing results
+# load testing results (JSON only — HTML reports are committed as examples)
 scripts/load-testing/results/*.json
-html-report.html
 
 # terraform
 terraform/**/.terraform/

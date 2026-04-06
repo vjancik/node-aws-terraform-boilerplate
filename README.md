@@ -1,6 +1,30 @@
-# node-aws-terraform-example
+# Node AWS Terraform Boilerplate (WIP)
 
-A monorepo example project using pnpm workspaces + Turborepo, with a NestJS backend and a placeholder web app. Infrastructure is managed with Terraform targeting AWS EKS.
+A monorepo example project using pnpm workspaces + Turborepo, with a NestJS backend and a placeholder web app. Infrastructure is managed with Terraform targeting AWS EKS (with Helm) or ECS.
+
+## Table of Contents
+
+- [Structure](#structure)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Commands](#commands)
+  - [Development](#development)
+  - [Build](#build)
+  - [Start (production)](#start-production)
+  - [Adding dependencies](#adding-dependencies)
+  - [Running arbitrary turbo tasks](#running-arbitrary-turbo-tasks)
+- [Deployment](#deployment)
+  - [Prerequisites](#prerequisites-1)
+  - [AWS authentication](#aws-authentication)
+  - [Layout](#layout)
+  - [Configure variables](#configure-variables)
+  - [Init](#init)
+  - [Plan (dry run)](#plan-dry-run)
+  - [Apply](#apply)
+  - [Tear down](#tear-down)
+- [Load testing](#load-testing)
+- [Further reading](#further-reading)
+- [Backend endpoints](#backend-endpoints)
 
 ## Structure
 
@@ -152,15 +176,15 @@ terraform -chdir=terraform/eks plan
 
 ### Apply
 
-Apply shared infrastructure first, then ECS or EKS:
+Apply shared infrastructure first:
 
 ```bash
 terraform -chdir=terraform/shared apply
-terraform -chdir=terraform/ecs apply   # ECS path
-terraform -chdir=terraform/eks apply   # EKS path
 ```
 
 After applying `shared`, copy the `github_actions_role_arn` output to your GitHub repository secrets as `AWS_ROLE_ARN`.
+
+Then apply ECS or EKS — both require a two-pass apply, see the sections below for the exact commands.
 
 #### Route 53 managed domains (optional)
 
@@ -201,7 +225,7 @@ resource "aws_route53_record" "alb" {
 }
 ```
 
-With Route 53, `terraform apply` completes in a single pass with no manual DNS steps.
+With Route 53, ECS `terraform apply` completes in a single pass with no manual DNS steps. EKS still requires two passes due to the Karpenter CRD requirement — see below.
 
 #### ECS: two-pass apply required
 
@@ -328,63 +352,19 @@ terraform -chdir=terraform/shared destroy
 
 ## Load testing
 
-Load tests live in `scripts/load-testing/`. Requires [k6](https://k6.io/docs/get-started/installation/).
+See [scripts/load-testing/README.md](scripts/load-testing/README.md) for run commands, test profile, and reference results comparing ECS and EKS autoscaling behaviour.
 
-```bash
-# Basic run
-K6_TARGET=https://api.yourdomain.com k6 run scripts/load-testing/fib.js
+## Further reading
 
-# With live dashboard at http://localhost:5665
-K6_WEB_DASHBOARD=true K6_TARGET=https://api.yourdomain.com k6 run scripts/load-testing/fib.js
-
-# With live dashboard + export HTML report on completion
-K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_EXPORT=html-report.html K6_TARGET=https://api.yourdomain.com k6 run scripts/load-testing/fib.js
-
-# Higher CPU load (default FIB_N=30, max practical ~45)
-K6_WEB_DASHBOARD=true K6_TARGET=https://api.yourdomain.com FIB_N=40 k6 run scripts/load-testing/fib.js
-```
-
-Results are saved as JSON to `scripts/load-testing/results/` (gitignored).
-
-## Node autoscaling — Karpenter vs alternatives
-
-This project uses Karpenter for EKS node autoscaling. Here's how it compares to the alternatives:
-
-### Karpenter (what we use)
-- Watches for `Pending` pods and provisions nodes in ~30s
-- Picks the cheapest instance type from a broad pool at launch time — including spot pricing
-- Bin-packs pods optimally across instance types and AZs
-- Consolidates underutilized nodes automatically
-- AWS-specific (Azure support exists but lags)
-- GA since 2023 — newer, less battle-tested than Cluster Autoscaler
-
-### Cluster Autoscaler
-- The traditional approach, been around since 2016
-- Works by scaling predefined Auto Scaling Groups up/down
-- Slower (~3-5 min vs ~30s) — polls ASG on a timer rather than watching pod events
-- Instance types fixed at ASG definition time — no dynamic selection
-- Multi-cloud — works on GKE, AKS, EKS with provider plugins
-- Vastly more documentation and production mileage
-
-### EKS Auto Mode / GKE Autopilot
-- Fully managed by the cloud provider — no Karpenter or Cluster Autoscaler to configure
-- AWS/GCP handle node provisioning, AMI updates, bin-packing automatically
-- Less control, potentially higher cost (management premium)
-- Best for teams that want zero node operational overhead
-
-### Static node groups
-- No autoscaling — fixed number of nodes, scale manually when needed
-- Simplest possible setup, surprisingly common for small stable workloads
-- No cold-start latency, predictable cost
-- Wasteful under variable load
-
-### When Karpenter is worth it
-Karpenter pays off when you have variable load and care about cost — the spot instance bin-packing alone can cut node costs by 60-70%. For a fixed, stable workload, static nodes or Cluster Autoscaler are simpler and equally effective.
+- [docs/kubernetes.md](docs/kubernetes.md) — Karpenter debugging, node autoscaling trade-offs, Gateway API conflict detection
+- [docs/terraform.md](docs/terraform.md) — ENI pod density limits, prefix delegation, terraform init -upgrade
+- [docs/todo.md](docs/todo.md) — Planned improvements
 
 ## Backend endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/fib/:n` | Compute fibonacci(n), capped at 42, runs in a worker thread |
 | GET | `/livez` | Liveness probe (Kubernetes) |
 | GET | `/readyz` | Readiness probe (Kubernetes) |
 | ALL | `/*` | Catch-all — returns `Ok` |

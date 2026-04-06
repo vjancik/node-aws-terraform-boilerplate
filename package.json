@@ -1,5 +1,7 @@
 {
   "name": "node-aws-terraform-boilerplate",
+  "author": "Viktor Jancik",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "turbo run build",
