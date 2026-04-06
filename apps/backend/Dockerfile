@@ -8,9 +8,12 @@ RUN corepack enable
 # Install all deps and build
 FROM base AS build
 ARG TARGETARCH
-COPY . /app
 WORKDIR /app
+# Copy manifests first so the install layer is cached independently of source changes
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/backend/package.json apps/backend/
 RUN --mount=type=cache,id=pnpm-${TARGETARCH},target=/pnpm/store pnpm install --frozen-lockfile --filter @repo/backend...
+COPY apps/backend/ apps/backend/
 RUN pnpm --filter @repo/backend build
 RUN pnpm deploy --filter @repo/backend --prod --legacy /prod/backend
 
