@@ -1,5 +1,13 @@
 data "aws_caller_identity" "current" {}
 
+# ── EC2 Spot service-linked role ───────────────────────────────────────────────
+# Required for Karpenter (and any spot usage) to launch spot instances.
+# Account-level — only needs to exist once per AWS account.
+
+resource "aws_iam_service_linked_role" "spot" {
+  aws_service_name = "spot.amazonaws.com"
+}
+
 # GitHub Actions OIDC provider
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
