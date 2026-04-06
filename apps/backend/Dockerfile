@@ -15,7 +15,7 @@ COPY apps/backend/package.json apps/backend/
 RUN --mount=type=cache,id=pnpm-${TARGETARCH},target=/pnpm/store pnpm install --frozen-lockfile --filter @repo/backend...
 COPY apps/backend/ apps/backend/
 RUN pnpm --filter @repo/backend build
-RUN pnpm deploy --filter @repo/backend --prod --legacy /prod/backend
+RUN --mount=type=cache,id=pnpm-${TARGETARCH},target=/pnpm/store pnpm deploy --filter @repo/backend --prod --legacy /prod/backend
 
 # Final image
 FROM node:24-alpine
