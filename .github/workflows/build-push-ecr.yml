@@ -131,7 +131,7 @@ jobs:
             --set image.tag=sha-${{ needs.build-push.outputs.short-sha }} \
             --set ingress.certificateArn=${{ secrets.EKS_ACM_CERT_ARN }} \
             --set ingress.host=${{ secrets.EKS_DOMAIN_NAME }} \
-            --atomic \
+            --rollback-on-failure \
             --timeout 5m
 
   deploy-ecs:

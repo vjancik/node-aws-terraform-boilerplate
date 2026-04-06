@@ -200,9 +200,6 @@ resource "kubernetes_manifest" "karpenter_ec2_node_class" {
       securityGroupSelectorTerms = [
         { tags = { "aws:eks:cluster-name" = module.eks.cluster_name } }
       ]
-      tags = {
-        "kubernetes.io/cluster/${var.name}" = "owned"
-      }
     }
   }
 
@@ -232,17 +229,6 @@ resource "kubernetes_manifest" "karpenter_node_pool" {
             # t and c family — Karpenter picks cheapest spot at launch time
             { key = "karpenter.k8s.aws/instance-category", operator = "In", values = ["c", "t"] },
             { key = "karpenter.k8s.aws/instance-size", operator = "In", values = ["small", "medium"] },
-          ]
-          # Spread across AZs by topology key
-          topologySpreadConstraints = [
-            {
-              maxSkew           = 1
-              topologyKey       = "topology.kubernetes.io/zone"
-              whenUnsatisfiable = "ScheduleAnyway"
-              labelSelector = {
-                matchLabels = { "karpenter.sh/nodepool" = "default" }
-              }
-            }
           ]
         }
       }

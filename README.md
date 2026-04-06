@@ -274,6 +274,14 @@ Then update kubeconfig locally to use kubectl against the cluster:
 aws eks update-kubeconfig --region us-east-1 --name node-tf-eks
 ```
 
+After deploying the Helm chart, get the ALB DNS name for your CNAME — it is provisioned by the ALB controller from the Ingress resource, not by Terraform, so it won't appear in `terraform output`:
+
+```bash
+kubectl get ingress backend
+```
+
+Add the value in the `ADDRESS` column as a CNAME for your domain in your DNS provider.
+
 #### Changing the domain name
 
 Updating `domain_name` in `terraform.tfvars` replaces the ACM certificate (`create_before_destroy` ensures no gap). Since ACM validation is required again, apply in two passes — same pattern as initial setup.

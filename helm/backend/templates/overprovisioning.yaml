@@ -17,7 +17,7 @@ spec:
   # One placeholder per node — keeps one spare pod slot warm on each node.
   # When a real pod preempts a placeholder, the placeholder goes Pending and
   # Karpenter provisions a new node to reschedule it, restoring headroom.
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: {{ .Release.Name }}-overprovisioning
