@@ -233,8 +233,8 @@ resource "kubernetes_manifest" "karpenter_node_pool" {
         }
       }
       limits = {
-        cpu    = "4"   # ~2x t4g.small
-        memory = "4Gi"
+        cpu    = "8"
+        memory = "8Gi"
       }
       disruption = {
         consolidationPolicy = "WhenEmptyOrUnderutilized"

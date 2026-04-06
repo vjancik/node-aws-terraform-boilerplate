@@ -33,24 +33,24 @@
     "testEnvironment": "node"
   },
   "dependencies": {
-    "@nestjs/common": "latest",
-    "@nestjs/core": "latest",
-    "@nestjs/platform-express": "latest",
-    "reflect-metadata": "latest",
-    "rxjs": "latest"
+    "@nestjs/common": "^11.1.18",
+    "@nestjs/core": "^11.1.18",
+    "@nestjs/platform-express": "^11.1.18",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@nestjs/cli": "latest",
-    "@nestjs/schematics": "latest",
+    "@nestjs/cli": "^11.1.18",
+    "@nestjs/schematics": "^11.0.10",
     "@nestjs/testing": "^11.1.18",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
-    "@types/node": "latest",
+    "@types/node": "^25.5.2",
     "@types/supertest": "^7.2.0",
     "jest": "^30.3.0",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.9",
     "tsx": "^4.21.0",
-    "typescript": "latest"
+    "typescript": "^6.0.2"
   }
 }
