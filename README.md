@@ -388,6 +388,7 @@ See [scripts/load-testing/README.md](scripts/load-testing/README.md) for run com
 - [docs/kubernetes.md](docs/kubernetes.md) — Karpenter debugging, node autoscaling trade-offs, Gateway API conflict detection
 - [docs/terraform.md](docs/terraform.md) — ENI pod density limits, prefix delegation, terraform init -upgrade
 - [docs/managed-kubernetes-cost-analysis.md](docs/managed-kubernetes-cost-analysis.md) — EKS vs GKE vs AKS cost comparison, NAT gateway, load balancer alternatives
+- [docs/container-hardening.md](docs/container-hardening.md) — securityContext settings, Docker Compose equivalents, readOnlyRootFilesystem notes
 - [docs/todo.md](docs/todo.md) — Planned improvements
 
 ## Backend endpoints

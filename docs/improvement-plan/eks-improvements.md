@@ -201,40 +201,21 @@ Add `gateway.wafAclArn` to `values.yaml` (populated from `terraform output waf_a
 
 ---
 
-## Step 5 — Container securityContext hardening [ ]
+## ~~Step 5 — Container securityContext hardening [x]~~
 
-**Why:** Containers currently run with no securityContext — they could write to the filesystem, escalate privileges, or use Linux capabilities they don't need. Defence in depth with minimal operational impact.
+**Implemented.** Key notes from the actual implementation:
 
-**What changes:** Add `securityContext` to the container spec in `helm/backend/templates/deployment.yaml`.
-
-```yaml
-containers:
-  - name: backend
-    securityContext:
-      allowPrivilegeEscalation: false
-      readOnlyRootFilesystem: true
-      capabilities:
-        drop: ["ALL"]
-      seccompProfile:
-        type: RuntimeDefault
-```
-
-**`readOnlyRootFilesystem: true` impact on NestJS:** Node.js writes to `/tmp` for some operations. Add a tmpfs emptyDir mount:
-```yaml
-volumeMounts:
-  - name: tmp
-    mountPath: /tmp
-volumes:
-  - name: tmp
-    emptyDir:
-      medium: Memory
-```
-
-Check if NestJS needs any other writable paths — the dist/ directory is read-only which is fine since it's already built. If the app writes anywhere else, add additional mounts.
-
-**No CPU limits note:** We currently set `cpu: "1"` as a limit in values.yaml. Per the reference repo's reasoning (and our own load test observations), CPU limits cause kernel throttling at fractional values. Consider removing the CPU limit and keeping only the CPU request for scheduling. Memory limit stays (prevents OOM).
-
-**Verify:** After deploy, confirm pods are Running. Test the `/fib/30` endpoint to ensure no filesystem permission errors at runtime. Check pod logs for any startup errors.
+- `readOnlyRootFilesystem: true` was skipped — Node.js writes to `/tmp` at runtime and tracking down all writable paths is fragile. The other three settings provide meaningful hardening with zero operational risk.
+- Implemented in `helm/backend/templates/deployment.yaml`:
+  ```yaml
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop: ["ALL"]
+    seccompProfile:
+      type: RuntimeDefault
+  ```
+- See [docs/container-hardening.md](../container-hardening.md) for full explanation of each setting, `readOnlyRootFilesystem` notes, and Docker Compose equivalents.
 
 ---
 
