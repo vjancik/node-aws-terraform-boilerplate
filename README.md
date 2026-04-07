@@ -30,8 +30,24 @@ A monorepo example project using pnpm workspaces + Turborepo, with a NestJS back
 
 ```
 apps/
-  backend/   # NestJS HTTP server
-  web/       # placeholder (unused)
+  backend/       # NestJS HTTP server
+  web/           # placeholder (unused)
+docs/
+  kubernetes.md  # Karpenter, autoscaling, Gateway API notes
+  terraform.md   # ENI limits, two-pass apply, init flags
+  todo.md        # planned improvements
+helm/
+  backend/       # Helm chart for the backend app (EKS)
+scripts/
+  load-testing/  # k6 load test scripts and HTML reports
+terraform/
+  shared/        # VPC, ECR, GitHub OIDC — shared between ECS and EKS
+  ecs/           # ECS Fargate stack
+  eks/           # EKS + Karpenter stack
+  modules/
+    ecs/         # ECS module
+    eks/         # EKS module
+    networking/  # VPC, subnets, NAT gateway
 ```
 
 ## Prerequisites
