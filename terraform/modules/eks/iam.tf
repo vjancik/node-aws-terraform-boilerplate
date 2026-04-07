@@ -53,7 +53,7 @@ resource "aws_iam_role_policy_attachment" "node_cni" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
-# ── VPC CNI IRSA ───────────────────────────────────────────────────────────────
+# ── VPC CNI Pod Identity ───────────────────────────────────────────────────────
 
 resource "aws_iam_role" "vpc_cni" {
   name = "${var.name}-eks-vpc-cni"
@@ -61,17 +61,9 @@ resource "aws_iam_role" "vpc_cni" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Federated = aws_iam_openid_connect_provider.eks.arn
-      }
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "${local.oidc_issuer_url}:aud" = "sts.amazonaws.com"
-          "${local.oidc_issuer_url}:sub" = "system:serviceaccount:kube-system:aws-node"
-        }
-      }
+      Effect    = "Allow"
+      Principal = { Service = "pods.eks.amazonaws.com" }
+      Action    = ["sts:AssumeRole", "sts:TagSession"]
     }]
   })
 }
@@ -81,7 +73,8 @@ resource "aws_iam_role_policy_attachment" "vpc_cni" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
-# ── AWS Load Balancer Controller IRSA ─────────────────────────────────────────
+
+# ── AWS Load Balancer Controller Pod Identity ──────────────────────────────────
 
 resource "aws_iam_role" "alb_controller" {
   name = "${var.name}-eks-alb-controller"
@@ -89,19 +82,18 @@ resource "aws_iam_role" "alb_controller" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Federated = aws_iam_openid_connect_provider.eks.arn
-      }
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "${local.oidc_issuer_url}:aud" = "sts.amazonaws.com"
-          "${local.oidc_issuer_url}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
-        }
-      }
+      Effect    = "Allow"
+      Principal = { Service = "pods.eks.amazonaws.com" }
+      Action    = ["sts:AssumeRole", "sts:TagSession"]
     }]
   })
+}
+
+resource "aws_eks_pod_identity_association" "alb_controller" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "kube-system"
+  service_account = "aws-load-balancer-controller"
+  role_arn        = aws_iam_role.alb_controller.arn
 }
 
 resource "aws_iam_policy" "alb_controller" {
@@ -117,7 +109,7 @@ resource "aws_iam_role_policy_attachment" "alb_controller" {
   policy_arn = aws_iam_policy.alb_controller.arn
 }
 
-# ── Karpenter IRSA ────────────────────────────────────────────────────────────
+# ── Karpenter Pod Identity ────────────────────────────────────────────────────
 
 resource "aws_iam_role" "karpenter_controller" {
   name = "${var.name}-karpenter-controller"
@@ -125,19 +117,18 @@ resource "aws_iam_role" "karpenter_controller" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
-      Principal = {
-        Federated = aws_iam_openid_connect_provider.eks.arn
-      }
-      Action = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "${local.oidc_issuer_url}:aud" = "sts.amazonaws.com"
-          "${local.oidc_issuer_url}:sub" = "system:serviceaccount:kube-system:karpenter"
-        }
-      }
+      Effect    = "Allow"
+      Principal = { Service = "pods.eks.amazonaws.com" }
+      Action    = ["sts:AssumeRole", "sts:TagSession"]
     }]
   })
+}
+
+resource "aws_eks_pod_identity_association" "karpenter" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "kube-system"
+  service_account = "karpenter"
+  role_arn        = aws_iam_role.karpenter_controller.arn
 }
 
 resource "aws_iam_role_policy" "karpenter_controller" {

@@ -38,22 +38,6 @@ resource "aws_eks_cluster" "main" {
   ]
 }
 
-# ── OIDC provider (enables IRSA — IAM Roles for Service Accounts) ──────────────
-
-data "tls_certificate" "eks_oidc" {
-  url = aws_eks_cluster.main.identity[0].oidc[0].issuer
-}
-
-resource "aws_iam_openid_connect_provider" "eks" {
-  url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.eks_oidc.certificates[0].sha1_fingerprint]
-}
-
-locals {
-  oidc_issuer     = aws_eks_cluster.main.identity[0].oidc[0].issuer
-  oidc_issuer_url = replace(local.oidc_issuer, "https://", "")
-}
 
 # ── Managed Node Group (bootstrap nodes — Karpenter takes over for scale-out) ──
 
@@ -122,7 +106,11 @@ resource "aws_eks_addon" "vpc_cni" {
   addon_name                  = "vpc-cni"
   addon_version               = "v1.21.1-eksbuild.7"
   resolve_conflicts_on_update = "OVERWRITE"
-  service_account_role_arn    = aws_iam_role.vpc_cni.arn
+
+  pod_identity_association {
+    role_arn        = aws_iam_role.vpc_cni.arn
+    service_account = "aws-node"
+  }
 }
 
 resource "aws_eks_addon" "pod_identity_agent" {

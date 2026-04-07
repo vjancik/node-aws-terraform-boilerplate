@@ -211,9 +211,6 @@ resource "kubernetes_service_account_v1" "alb_controller" {
   metadata {
     name      = "aws-load-balancer-controller"
     namespace = "kube-system"
-    annotations = {
-      "eks.amazonaws.com/role-arn" = module.eks.alb_controller_role_arn
-    }
   }
   depends_on = [module.eks]
 }
@@ -298,11 +295,12 @@ resource "helm_release" "karpenter" {
   version    = "1.10.0"
 
   set = [
-    { name = "settings.clusterName",                                      value = module.eks.cluster_name },
-    { name = "settings.interruptionQueue",                                value = module.eks.karpenter_interruption_queue_name },
-    { name = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn", value = module.eks.karpenter_controller_role_arn },
-    { name = "controller.resources.requests.cpu",                         value = "100m" },
-    { name = "controller.resources.requests.memory",                      value = "256Mi" },
+    { name = "settings.clusterName",                 value = module.eks.cluster_name },
+    { name = "settings.interruptionQueue",           value = module.eks.karpenter_interruption_queue_name },
+    { name = "controller.resources.requests.cpu",    value = "100m" },
+    { name = "controller.resources.requests.memory", value = "256Mi" },
+    # Default is 2. Requires 2 non-karpenter nodes to launch 2nd controller replica. Otherwise the second pod stays permanently Pending.
+    { name = "replicas",                             value = "1" },
   ]
 
   depends_on = [module.eks]

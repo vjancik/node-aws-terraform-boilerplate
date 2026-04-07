@@ -13,15 +13,21 @@ spec:
       labels:
         app: {{ .Release.Name }}
     spec:
-      # Spread pods across AZs — topology.kubernetes.io/zone is set on all nodes
-      # regardless of whether they were provisioned by the managed node group or Karpenter
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: topology.kubernetes.io/zone
-          whenUnsatisfiable: ScheduleAnyway
-          labelSelector:
-            matchLabels:
-              app: {{ .Release.Name }}
+      # topologySpreadConstraints are commented out intentionally.
+      # Even with whenUnsatisfiable: ScheduleAnyway (preferred, not required), Karpenter
+      # treats the constraint as a consolidation blocker and will not scale Karpenter nodes
+      # down to 0 while any pod with a topology spread constraint exists. With minReplicas=1
+      # this prevents the second Karpenter node from ever being reclaimed after scale-in.
+      # Karpenter naturally spreads nodes across AZs via subnet placement — explicit spread
+      # constraints are redundant for single-service setups.
+      #
+      # topologySpreadConstraints:
+      #   - maxSkew: 1
+      #     topologyKey: topology.kubernetes.io/zone
+      #     whenUnsatisfiable: ScheduleAnyway
+      #     labelSelector:
+      #       matchLabels:
+      #         app: {{ .Release.Name }}
       containers:
         - name: backend
           securityContext:
