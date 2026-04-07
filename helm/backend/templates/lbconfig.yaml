@@ -4,6 +4,8 @@ metadata:
   name: {{ .Release.Name }}-alb-config
 spec:
   scheme: internet-facing
+  wafV2:
+    webACL: {{ .Values.gateway.wafAclArn | quote }}
   listenerConfigurations:
     - protocolPort: HTTPS:443
       defaultCertificate: {{ .Values.gateway.certificateArn | quote }}

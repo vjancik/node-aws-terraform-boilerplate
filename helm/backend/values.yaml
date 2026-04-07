@@ -9,6 +9,8 @@ service:
 gateway:
   # ACM certificate ARN — output from terraform/eks
   certificateArn: ""
+  # WAF WebACL ARN — output from terraform/eks
+  wafAclArn: ""
   # Hostname for the ALB routing rule — passed via --set gateway.host=... at deploy time
   host: ""
 

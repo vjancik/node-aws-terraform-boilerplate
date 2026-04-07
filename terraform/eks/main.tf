@@ -98,6 +98,82 @@ resource "aws_ec2_tag" "private_subnet_cluster" {
   value       = "shared"
 }
 
+# ── WAF ───────────────────────────────────────────────────────────────────────
+# Cost: ~$7/month (WebACL $5 + 2 managed rule groups $1 each)
+# Disable by removing the wafV2 block from lbconfig.yaml and destroying this resource.
+
+resource "aws_wafv2_web_acl" "alb" {
+  name  = "${var.name}-alb-waf"
+  scope = "REGIONAL"
+
+  default_action {
+    allow {}
+  }
+
+  rule {
+    name     = "AWSManagedRulesCommonRuleSet"
+    priority = 1
+    override_action {
+      none {}
+    }
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesCommonRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "CommonRuleSet"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "AWSManagedRulesKnownBadInputsRuleSet"
+    priority = 2
+    override_action {
+      none {}
+    }
+    statement {
+      managed_rule_group_statement {
+        name        = "AWSManagedRulesKnownBadInputsRuleSet"
+        vendor_name = "AWS"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "KnownBadInputs"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  rule {
+    name     = "RateLimitPerIP"
+    priority = 3
+    action {
+      block {}
+    }
+    statement {
+      rate_based_statement {
+        limit              = 10000
+        aggregate_key_type = "IP"
+      }
+    }
+    visibility_config {
+      cloudwatch_metrics_enabled = true
+      metric_name                = "RateLimit"
+      sampled_requests_enabled   = true
+    }
+  }
+
+  visibility_config {
+    cloudwatch_metrics_enabled = true
+    metric_name                = "${var.name}-alb-waf"
+    sampled_requests_enabled   = true
+  }
+}
+
 # ── ACM certificate ────────────────────────────────────────────────────────────
 
 resource "aws_acm_certificate" "main" {
@@ -290,7 +366,7 @@ resource "kubernetes_manifest" "karpenter_node_pool" {
       }
       disruption = {
         consolidationPolicy = "WhenEmptyOrUnderutilized"
-        consolidateAfter    = "5m"
+        consolidateAfter    = "1m"
       }
     }
   }

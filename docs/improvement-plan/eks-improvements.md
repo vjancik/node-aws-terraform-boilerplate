@@ -105,7 +105,7 @@ resource "aws_eks_pod_identity_association" "alb_controller" {
 
 ---
 
-## Step 4 — WAF on the ALB [ ]
+## ~~Step 4 — WAF on the ALB [x]~~
 
 **Why:** No WAF currently. At minimum, the AWS Managed Rules (Core Rule Set) blocks common exploits (XSS, SQLi). Rate limiting prevents basic DDoS. Low config overhead for meaningful protection.
 

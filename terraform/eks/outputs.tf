@@ -18,6 +18,11 @@ output "acm_certificate_arn" {
   value       = aws_acm_certificate.main.arn
 }
 
+output "waf_acl_arn" {
+  description = "WAF WebACL ARN — pass to helm deploy as gateway.wafAclArn"
+  value       = aws_wafv2_web_acl.alb.arn
+}
+
 output "acm_certificate_validation_options" {
   description = "DNS records to create for ACM certificate validation"
   value = {
