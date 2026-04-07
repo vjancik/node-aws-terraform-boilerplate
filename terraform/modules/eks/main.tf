@@ -4,6 +4,13 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
 }
 
+# ── CloudWatch log group (retention — EKS creates this automatically otherwise) ─
+
+resource "aws_cloudwatch_log_group" "eks_cluster" {
+  name              = "/aws/eks/${var.name}/cluster"
+  retention_in_days = 30
+}
+
 # ── EKS Cluster ────────────────────────────────────────────────────────────────
 
 resource "aws_eks_cluster" "main" {
@@ -22,7 +29,10 @@ resource "aws_eks_cluster" "main" {
     bootstrap_cluster_creator_admin_permissions = true
   }
 
+  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+
   depends_on = [
+    aws_cloudwatch_log_group.eks_cluster,
     aws_iam_role_policy_attachment.cluster_policy,
     aws_iam_role_policy_attachment.cluster_vpc_resource_controller,
   ]
@@ -87,10 +97,15 @@ resource "aws_eks_node_group" "main" {
 }
 
 # ── EKS Add-ons ────────────────────────────────────────────────────────────────
+# To check latest available versions for each addon (replace K8S_VERSION as needed):
+# aws eks describe-addon-versions --kubernetes-version 1.35 \
+#   --query 'addons[?contains(`["coredns","kube-proxy","vpc-cni","eks-pod-identity-agent"]`, addonName)].{name:addonName,latest:addonVersions[0].addonVersion}' \
+#   --output table
 
 resource "aws_eks_addon" "coredns" {
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "coredns"
+  addon_version               = "v1.13.2-eksbuild.4"
   resolve_conflicts_on_update = "OVERWRITE"
   depends_on                  = [aws_eks_node_group.main]
 }
@@ -98,12 +113,14 @@ resource "aws_eks_addon" "coredns" {
 resource "aws_eks_addon" "kube_proxy" {
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "kube-proxy"
+  addon_version               = "v1.35.3-eksbuild.2"
   resolve_conflicts_on_update = "OVERWRITE"
 }
 
 resource "aws_eks_addon" "vpc_cni" {
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "vpc-cni"
+  addon_version               = "v1.21.1-eksbuild.7"
   resolve_conflicts_on_update = "OVERWRITE"
   service_account_role_arn    = aws_iam_role.vpc_cni.arn
 }
@@ -111,5 +128,6 @@ resource "aws_eks_addon" "vpc_cni" {
 resource "aws_eks_addon" "pod_identity_agent" {
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "eks-pod-identity-agent"
+  addon_version               = "v1.3.10-eksbuild.2"
   resolve_conflicts_on_update = "OVERWRITE"
 }
