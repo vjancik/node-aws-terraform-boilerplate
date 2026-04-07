@@ -156,7 +156,7 @@ Terraform is split into independent root modules. Apply them in order:
 terraform/
   shared/   # VPC, ECR, GitHub OIDC IAM — apply first, never destroy while other layers exist
   ecs/      # ECS Fargate cluster, ALB, ACM, auto scaling — depends on shared/
-  eks/      # EKS cluster, Karpenter, ALB controller, metrics-server — depends on shared/
+  eks/      # EKS cluster, Karpenter, ALB controller, ExternalDNS, metrics-server — depends on shared/
   modules/  # reusable modules, not applied directly
 ```
 
@@ -241,7 +241,7 @@ resource "aws_route53_record" "alb" {
 }
 ```
 
-With Route 53, ECS `terraform apply` completes in a single pass with no manual DNS steps. EKS still requires two passes due to the Karpenter CRD requirement — see below.
+With Route 53, ECS `terraform apply` completes in a single pass with no manual DNS steps. EKS uses ExternalDNS for DNS management (see below) and still requires two passes due to the Karpenter CRD requirement.
 
 #### ECS: two-pass apply required
 
@@ -314,13 +314,26 @@ Then update kubeconfig locally to use kubectl against the cluster:
 aws eks update-kubeconfig --region us-east-1 --name node-tf-eks
 ```
 
-After deploying the Helm chart, get the ALB DNS name for your CNAME — it is provisioned by the ALB controller from the Ingress resource, not by Terraform, so it won't appear in `terraform output`:
+#### ExternalDNS + Cloudflare setup (EKS only)
+
+EKS uses [ExternalDNS](https://github.com/kubernetes-sigs/external-dns) with the Cloudflare provider to automatically create and update DNS records whenever a Gateway HTTPRoute is deployed. No manual CNAME management is needed after initial setup.
+
+**ACM certificate:** Use a wildcard certificate (`*.yourdomain.com`) rather than a per-subdomain cert. This allows ExternalDNS to add any subdomain to the HTTPRoute without requiring a new cert or re-validation. Set `domain_name = "*.yourdomain.com"` in `terraform/eks/terraform.tfvars`. The wildcard validation CNAME only needs to be added to your DNS provider once.
+
+**Cloudflare API token:** Create a token with **Zone / DNS / Edit** permission scoped to your zone (Cloudflare dashboard → My Profile → API Tokens). Then create a Kubernetes secret (do not commit the token):
 
 ```bash
-kubectl get ingress backend
+kubectl create secret generic cloudflare-api-token \
+  --from-literal=token=<CF_API_TOKEN> \
+  -n kube-system
 ```
 
-Add the value in the `ADDRESS` column as a CNAME for your domain in your DNS provider.
+After deploying the Helm chart, ExternalDNS automatically creates a CNAME record in Cloudflare pointing each hostname in the HTTPRoute at the ALB address. Verify:
+
+```bash
+kubectl logs -n kube-system -l app.kubernetes.io/name=external-dns --tail=20
+kubectl get gateway backend-gateway
+```
 
 #### Changing the domain name
 
@@ -350,11 +363,11 @@ terraform -chdir=terraform/eks apply -target=aws_acm_certificate.main
 # Add the validation CNAME from the output to your DNS provider
 terraform -chdir=terraform/eks output
 
-# Pass 2: everything else (Ingress annotation picks up new cert ARN automatically)
+# Pass 2: everything else (Gateway picks up new cert ARN automatically)
 terraform -chdir=terraform/eks apply
 ```
 
-Then update `EKS_ACM_CERT_ARN` and `EKS_DOMAIN_NAME` GitHub secrets to the new values, and update your DNS CNAME for the new subdomain to point at the ALB DNS name.
+Then update `EKS_ACM_CERT_ARN` GitHub secret to the new value. ExternalDNS handles the DNS CNAME automatically.
 
 ### Tear down
 

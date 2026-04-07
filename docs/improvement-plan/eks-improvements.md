@@ -5,193 +5,40 @@ Check off each item as it's done.
 
 ---
 
-## Step 1 — Gateway API with ALB controller [ ]
+## ~~Step 1 — Gateway API with ALB controller [x]~~
 
-**Why:** Current setup uses the classic Kubernetes `Ingress` API with ALB annotations. Gateway API is the official successor, allows multiple services to share one ALB via multiple `HTTPRoute` resources attached to a single `Gateway`, and is required for any future Envoy Gateway hybrid setup.
+**Implemented.** Key notes from the actual implementation:
 
-**What changes:**
-- Enable Gateway API feature gate on the ALB controller (`ALBGatewayAPI=true`)
-- Install Gateway API CRDs (standard channel)
-- Add two new AWS LBC CRDs: `LoadBalancerConfiguration`, `TargetGroupConfiguration`
-- Replace `helm/backend/templates/ingress.yaml` (Ingress) with three new manifests:
-  - `gatewayclass.yaml` — cluster-scoped, created once
-  - `gateway.yaml` — one per cluster (or moved to Terraform)
-  - `httproute.yaml` — one per service, replaces Ingress rules
-- Remove `ingress.*` values from `helm/backend/values.yaml`; add `gateway.*` values
-
-**ALB controller change** in `terraform/eks/main.tf` — add feature gate:
-```hcl
-{ name = "controllerConfig.featureGates.ALBGatewayAPI", value = "true" }
-```
-
-**Install Gateway API CRDs** (run once after Terraform apply, before helm deploy):
-```bash
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
-```
-
-**Install AWS LBC Gateway API CRDs** (LoadBalancerConfiguration + TargetGroupConfiguration):
-```bash
-kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller/crds?ref=master"
-```
-
-**GatewayClass manifest** (`helm/backend/templates/gatewayclass.yaml`):
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: aws-lb-controller
-spec:
-  controllerName: gateway.k8s.aws/alb
-```
-Note: GatewayClass is cluster-scoped. If we later add more services, they reuse this same GatewayClass. Consider moving it out of the backend Helm chart into a separate cluster-config chart or applying it once via kubectl.
-
-**LoadBalancerConfiguration** (`helm/backend/templates/lbconfig.yaml`):
-```yaml
-apiVersion: gateway.k8s.aws/v1beta1
-kind: LoadBalancerConfiguration
-metadata:
-  name: backend-alb-config
-spec:
-  scheme: internet-facing
-  listenerConfigurations:
-    - protocolPort: HTTPS:443
-      defaultCertificate: {{ .Values.gateway.certificateArn | quote }}
-```
-
-**Gateway manifest** (`helm/backend/templates/gateway.yaml`):
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: backend-gateway
-spec:
-  gatewayClassName: aws-lb-controller
-  infrastructure:
-    parametersRef:
-      group: gateway.k8s.aws
-      kind: LoadBalancerConfiguration
-      name: backend-alb-config
-  listeners:
-    - name: http
-      protocol: HTTP
-      port: 80
-    - name: https
-      protocol: HTTPS
-      port: 443
-      allowedRoutes:
-        namespaces:
-          from: Same
-```
-
-**HTTPRoute manifest** (`helm/backend/templates/httproute.yaml`):
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: {{ .Release.Name }}
-spec:
-  hostnames:
-    - {{ .Values.gateway.host | quote }}
-  parentRefs:
-    - name: backend-gateway
-      sectionName: https
-  rules:
-    - backendRefs:
-        - name: {{ .Release.Name }}
-          port: {{ .Values.service.port }}
-```
-
-**TargetGroupConfiguration** (`helm/backend/templates/targetgroupconfig.yaml`):
-```yaml
-apiVersion: gateway.k8s.aws/v1beta1
-kind: TargetGroupConfiguration
-metadata:
-  name: {{ .Release.Name }}-tgc
-spec:
-  targetReference:
-    kind: Service
-    name: {{ .Release.Name }}
-  defaultConfiguration:
-    targetType: ip
-    healthCheckConfig:
-      path: /readyz
-      port: {{ .Values.service.port }}
-      protocol: HTTP
-      healthyThresholdCount: 2
-      unhealthyThresholdCount: 3
-      intervalSeconds: 30
-```
-
-Note: The HTTP→HTTPS redirect (`ssl-redirect: "443"`) currently set as an Ingress annotation needs to move to a separate HTTPRoute on the http listener that redirects to https. Add a redirect rule to the http listener's HTTPRoute.
-
-**values.yaml changes:** rename `ingress.*` to `gateway.*`:
-```yaml
-gateway:
-  certificateArn: ""
-  host: ""
-```
-
-**Verify:** After deploy, `kubectl get gateway backend-gateway` shows `PROGRAMMED = True` and an ADDRESS. Hit both HTTP (should redirect) and HTTPS endpoints.
-
-The old Ingress-provisioned ALB is deleted automatically when the Ingress resource is removed. The new Gateway-provisioned ALB takes its place. Update the DNS CNAME to the new ALB address.
+- ALB controller upgraded to `3.2.1` with `ALBGatewayAPI=true` feature gate
+- Gateway API CRDs: use the **experimental channel** v1.5.1 (standard channel missing `ListenerSet` required by LBC 3.2.1):
+  ```bash
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.1/standard-install.yaml
+  ```
+- AWS LBC CRDs (`LoadBalancerConfiguration`, `TargetGroupConfiguration`) are installed automatically by the ALB controller Helm chart — no separate install needed
+- `TargetGroupConfiguration` health check field names differ from Ingress annotation names: use `healthCheckPath`, `healthCheckPort`, `healthCheckProtocol`, `healthCheckInterval` (not `path`, `port`, `protocol`, `intervalSeconds`). `healthCheckPort` must be a string (quote it in Helm).
+- SSL policy moved to `LoadBalancerConfiguration.spec.listenerConfigurations[].sslPolicy`
+- HTTP→HTTPS redirect handled by a separate HTTPRoute on the `http` listener using `RequestRedirect` filter — no host matching needed (catch-all)
+- `gateway.hosts` is a list — supports multiple subdomains on one ALB. ExternalDNS annotation uses comma-joined list: `{{ join "," .Values.gateway.hosts }}`
+- ACM cert must be a **wildcard** (`*.yourdomain.com`) to cover all subdomains without re-validation per host
 
 ---
 
-## Step 2 — ExternalDNS with Cloudflare provider [ ]
+## ~~Step 2 — ExternalDNS with Cloudflare provider [x]~~
 
-**Why:** Currently, getting the ALB DNS name requires running `kubectl get ingress backend` and manually adding/updating a CNAME in Cloudflare. ExternalDNS automates this — it watches the Gateway resource and creates/updates the Cloudflare DNS record automatically on every deploy.
+**Implemented.** Key notes from the actual implementation:
 
-**What changes:**
-- Add ExternalDNS Helm release to `terraform/eks/main.tf`
-- Add IAM role for ExternalDNS (needs no AWS DNS permissions — Cloudflare provider uses an API token instead)
-- Create a Cloudflare API token with Zone:DNS:Edit permission scoped to your zone
-- Store the token as a Kubernetes secret (created once manually or via Terraform `kubernetes_secret`)
-- Annotate the HTTPRoute with `external-dns.alpha.kubernetes.io/hostname` so ExternalDNS knows which domain to register
-
-**ExternalDNS Helm release** in `terraform/eks/main.tf`:
-```hcl
-resource "helm_release" "external_dns" {
-  name       = "external-dns"
-  namespace  = "kube-system"
-  repository = "https://kubernetes-sigs.github.io/external-dns/"
-  chart      = "external-dns"
-  version    = "1.16.1"  # check latest
-
-  set = [
-    { name = "provider",                                value = "cloudflare" },
-    { name = "env[0].name",                             value = "CF_API_TOKEN" },
-    { name = "env[0].valueFrom.secretKeyRef.name",      value = "cloudflare-api-token" },
-    { name = "env[0].valueFrom.secretKeyRef.key",       value = "token" },
-    { name = "sources[0]",                              value = "gateway-httproute" },
-    { name = "policy",                                  value = "upsert-only" },
-    { name = "txtOwnerId",                              value = "eks-node-tf" },
-  ]
-
-  depends_on = [module.eks]
-}
-```
-
-**Cloudflare secret** (create once — do not commit the token):
-```bash
-kubectl create secret generic cloudflare-api-token \
-  --from-literal=token=<CF_API_TOKEN> \
-  -n kube-system
-```
-
-Or manage via Terraform `kubernetes_secret` with a `sensitive` variable.
-
-**HTTPRoute annotation** (add to `helm/backend/templates/httproute.yaml`):
-```yaml
-metadata:
-  annotations:
-    external-dns.alpha.kubernetes.io/hostname: {{ .Values.gateway.host | quote }}
-```
-
-**Policy `upsert-only`** means ExternalDNS will create and update records but never delete them. This is safe default behaviour — manual cleanup if you decommission a service.
-
-**Verify:** After deploy, wait ~1 minute. Check Cloudflare DNS dashboard — the A/CNAME record for your domain should appear pointing at the new ALB address. `nslookup <domain>` to confirm propagation.
-
-After this step, the manual CNAME update on every deploy is no longer needed.
+- ExternalDNS chart version `1.20.0`, source `gateway-httproute`, provider `cloudflare`
+- Cloudflare token requires **Zone / DNS / Edit** permission scoped to the specific zone — no broader account permissions needed
+- Token stored as a manual Kubernetes secret (not in Terraform state):
+  ```bash
+  kubectl create secret generic cloudflare-api-token \
+    --from-literal=token=<CF_API_TOKEN> \
+    -n kube-system
+  ```
+- ExternalDNS polls on ~1 minute interval — not event-driven. DNS records appear within 1 minute of HTTPRoute creation
+- Also creates a `TXT` ownership record (`cname-<hostname>`) alongside each CNAME — used to track which records ExternalDNS owns (`upsert-only` policy means it never deletes)
+- Multiple hostnames in one annotation: `{{ join "," .Values.gateway.hosts }}` — ExternalDNS creates one CNAME per hostname
+- The CNAME points at the ALB hostname which is stable across helm deploys — only changes if the Gateway resource is recreated
 
 ---
 
@@ -393,22 +240,10 @@ Check if NestJS needs any other writable paths — the dist/ directory is read-o
 
 ## ~~Step 6 — Control plane logging [x]~~
 
-**Why:** Currently no EKS control plane logs are sent to CloudWatch. These are essential for security incident investigation (who called what API, authentication events). The sample repo enables all five log types.
+**Implemented.** Key notes from the actual implementation:
 
-**Cost:** EKS control plane logs go to CloudWatch Logs. The data ingestion cost is $0.50/GB. For a small cluster with low API activity, this is typically **under $1/month** and often rounds to a few cents. CloudWatch log storage is $0.03/GB/month after the free tier (5GB free). Effectively free for a small cluster.
-
-**What changes:** Add `enabled_cluster_log_types` to `aws_eks_cluster.main` in `terraform/modules/eks/main.tf`:
-
-```hcl
-resource "aws_eks_cluster" "main" {
-  ...
-  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
-  ...
-}
-```
-
-This is an in-place update — no cluster replacement, no downtime. Terraform will update the cluster configuration directly.
-
-Logs appear in CloudWatch under `/aws/eks/<cluster-name>/cluster`.
-
-**Verify:** After `terraform apply`, go to CloudWatch → Log groups → `/aws/eks/node-tf-eks/cluster`. You should see log streams for each component. Run `kubectl get nodes` and confirm an API log entry appears.
+- `enabled_cluster_log_types` added to `aws_eks_cluster.main` in `terraform/modules/eks/main.tf` — in-place update, no downtime
+- CloudWatch log group `/aws/eks/node-tf-eks/cluster` imported into Terraform state with 30-day retention (`aws_cloudwatch_log_group` resource in the same module). Without this, EKS creates the log group with no expiry and Terraform has no control over retention.
+- Log group must be added to `depends_on` in `aws_eks_cluster.main` so it exists before the cluster tries to write to it
+- Import command used: `terraform -chdir=terraform/eks import 'module.eks.aws_cloudwatch_log_group.eks_cluster' '/aws/eks/node-tf-eks/cluster'`
+- Cost: effectively free for a small cluster — ingestion is $0.50/GB, a quiet cluster produces a few MB/day at most

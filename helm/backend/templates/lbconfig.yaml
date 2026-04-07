@@ -1,0 +1,10 @@
+apiVersion: gateway.k8s.aws/v1beta1
+kind: LoadBalancerConfiguration
+metadata:
+  name: {{ .Release.Name }}-alb-config
+spec:
+  scheme: internet-facing
+  listenerConfigurations:
+    - protocolPort: HTTPS:443
+      defaultCertificate: {{ .Values.gateway.certificateArn | quote }}
+      sslPolicy: ELBSecurityPolicy-TLS13-1-2-Res-PQ-2025-09

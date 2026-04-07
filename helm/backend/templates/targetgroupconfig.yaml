@@ -1,0 +1,17 @@
+apiVersion: gateway.k8s.aws/v1beta1
+kind: TargetGroupConfiguration
+metadata:
+  name: {{ .Release.Name }}-tgc
+spec:
+  targetReference:
+    kind: Service
+    name: {{ .Release.Name }}
+  defaultConfiguration:
+    targetType: ip
+    healthCheckConfig:
+      healthCheckPath: /readyz
+      healthCheckPort: {{ .Values.service.port | quote }}
+      healthCheckProtocol: HTTP
+      healthCheckInterval: 30
+      healthyThresholdCount: 2
+      unhealthyThresholdCount: 3

@@ -1,0 +1,8 @@
+# GatewayClass is cluster-scoped and shared across all services.
+# If multiple Helm charts are deployed, this resource will be the same — idempotent.
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: aws-lb-controller
+spec:
+  controllerName: gateway.k8s.aws/alb

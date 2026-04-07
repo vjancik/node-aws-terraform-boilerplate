@@ -98,7 +98,7 @@ resource "aws_ec2_tag" "private_subnet_cluster" {
   value       = "shared"
 }
 
-# ── ACM certificate (used by Ingress annotation) ───────────────────────────────
+# ── ACM certificate ────────────────────────────────────────────────────────────
 
 resource "aws_acm_certificate" "main" {
   domain_name       = var.domain_name
@@ -147,17 +147,69 @@ resource "helm_release" "alb_controller" {
   namespace  = "kube-system"
   repository = "https://aws.github.io/eks-charts"
   chart      = "aws-load-balancer-controller"
-  version    = "3.1.0"
+  version    = "3.2.1"
 
   set = [
-    { name = "clusterName",           value = module.eks.cluster_name },
-    { name = "serviceAccount.create", value = "false" },
-    { name = "serviceAccount.name",   value = "aws-load-balancer-controller" },
-    { name = "region",                value = var.aws_region },
-    { name = "vpcId",                 value = data.terraform_remote_state.shared.outputs.vpc_id },
+    { name = "clusterName",                                        value = module.eks.cluster_name },
+    { name = "serviceAccount.create",                              value = "false" },
+    { name = "serviceAccount.name",                                value = "aws-load-balancer-controller" },
+    { name = "region",                                             value = var.aws_region },
+    { name = "vpcId",                                              value = data.terraform_remote_state.shared.outputs.vpc_id },
+    # Enable Gateway API support (required for Gateway/HTTPRoute resources)
+    { name = "controllerConfig.featureGates.ALBGatewayAPI",        value = "true" },
   ]
 
   depends_on = [kubernetes_service_account_v1.alb_controller]
+}
+
+# ── Gateway API CRDs ───────────────────────────────────────────────────────────
+# Standard channel v1.2.1 — includes GatewayClass, Gateway, HTTPRoute (all GA).
+# Must be installed before any Gateway/HTTPRoute resources are applied.
+# To upgrade: change the version in the URL and re-apply.
+
+resource "null_resource" "gateway_api_crds" {
+  triggers = {
+    version = "v1.5.1-standard"
+  }
+
+  provisioner "local-exec" {
+    command = "kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.5.1/standard-install.yaml"
+    environment = {
+      KUBECONFIG = ""
+      AWS_DEFAULT_REGION = var.aws_region
+    }
+  }
+
+  depends_on = [module.eks]
+}
+
+# ── ExternalDNS (Cloudflare provider) ─────────────────────────────────────────
+# Watches Gateway HTTPRoutes and automatically creates/updates DNS records
+# in Cloudflare. Requires a Cloudflare API token stored as a k8s secret.
+#
+# Create the secret once (not managed by Terraform to avoid storing token in state):
+#   kubectl create secret generic cloudflare-api-token \
+#     --from-literal=token=<CF_API_TOKEN> \
+#     -n kube-system
+
+resource "helm_release" "external_dns" {
+  name       = "external-dns"
+  namespace  = "kube-system"
+  repository = "https://kubernetes-sigs.github.io/external-dns/"
+  chart      = "external-dns"
+  version    = "1.20.0"
+
+  set = [
+    { name = "provider.name",                                 value = "cloudflare" },
+    { name = "env[0].name",                                   value = "CF_API_TOKEN" },
+    { name = "env[0].valueFrom.secretKeyRef.name",            value = "cloudflare-api-token" },
+    { name = "env[0].valueFrom.secretKeyRef.key",             value = "token" },
+    { name = "sources[0]",                                    value = "gateway-httproute" },
+    { name = "policy",                                        value = "upsert-only" },
+    { name = "txtOwnerId",                                    value = var.name },
+  ]
+
+  depends_on = [module.eks]
 }
 
 # ── Karpenter ──────────────────────────────────────────────────────────────────

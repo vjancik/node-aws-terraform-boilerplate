@@ -6,11 +6,10 @@ image:
 service:
   port: 3000
 
-ingress:
-  enabled: true
+gateway:
   # ACM certificate ARN — output from terraform/eks
   certificateArn: ""
-  # Host for the ALB routing rule (e.g. api.yourdomain.com)
+  # Hostname for the ALB routing rule — passed via --set gateway.host=... at deploy time
   host: ""
 
 hpa:

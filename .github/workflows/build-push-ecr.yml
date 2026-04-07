@@ -129,8 +129,8 @@ jobs:
             --namespace default \
             --set image.repository=${{ steps.ecr-login.outputs.registry }}/backend \
             --set image.tag=sha-${{ needs.build-push.outputs.short-sha }} \
-            --set ingress.certificateArn=${{ secrets.EKS_ACM_CERT_ARN }} \
-            --set ingress.host=${{ secrets.EKS_DOMAIN_NAME }} \
+            --set gateway.certificateArn=${{ secrets.EKS_ACM_CERT_ARN }} \
+            --set gateway.host=${{ secrets.EKS_DOMAIN_NAME }} \
             --rollback-on-failure \
             --timeout 5m
 
