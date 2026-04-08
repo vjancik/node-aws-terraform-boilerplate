@@ -1,0 +1,5 @@
+apiVersion: v2
+name: gateway
+description: Shared ALB Gateway — deployed once per cluster. All services attach HTTPRoutes to this Gateway.
+type: application
+version: 0.1.0

@@ -285,6 +285,26 @@ resource "helm_release" "external_dns" {
   depends_on = [module.eks]
 }
 
+# ── Shared ALB Gateway ────────────────────────────────────────────────────────
+# Deployed once per cluster. All services attach HTTPRoutes to this Gateway.
+# Provisioning the Gateway triggers ALB creation by the ALB controller.
+
+resource "helm_release" "gateway" {
+  name      = "gateway"
+  namespace = "default"
+  chart     = "${path.root}/../../helm/gateway"
+
+  set = [
+    { name = "certificateArn", value = aws_acm_certificate.main.arn },
+    { name = "wafAclArn",      value = aws_wafv2_web_acl.alb.arn },
+  ]
+
+  depends_on = [
+    helm_release.alb_controller,
+    null_resource.gateway_api_crds,
+  ]
+}
+
 # ── Karpenter ──────────────────────────────────────────────────────────────────
 
 resource "helm_release" "karpenter" {

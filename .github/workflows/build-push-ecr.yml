@@ -123,14 +123,12 @@ jobs:
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --region us-east-1 --name node-tf-eks
 
-      - name: Deploy via Helm
+      - name: Deploy backend
         run: |
           helm upgrade --install backend ./helm/backend \
             --namespace default \
             --set image.repository=${{ steps.ecr-login.outputs.registry }}/backend \
             --set image.tag=sha-${{ needs.build-push.outputs.short-sha }} \
-            --set gateway.certificateArn=${{ secrets.EKS_ACM_CERT_ARN }} \
-            --set gateway.wafAclArn=${{ secrets.EKS_WAF_ACL_ARN }} \
             --set gateway.host=${{ secrets.EKS_DOMAIN_NAME }} \
             --rollback-on-failure \
             --timeout 5m

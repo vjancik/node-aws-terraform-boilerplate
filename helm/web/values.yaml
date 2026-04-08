@@ -1,5 +1,5 @@
 image:
-  repository: ""  # set via --set image.repository=<ecr-url>/backend
+  repository: ""  # set via --set image.repository=<ecr-url>/web
   tag: "latest"
   pullPolicy: IfNotPresent
 
@@ -13,7 +13,6 @@ gateway:
 hpa:
   minReplicas: 1
   maxReplicas: 20
-  # Scale out when average CPU across pods exceeds 60%
   cpuTargetPercent: 60
 
 resources:

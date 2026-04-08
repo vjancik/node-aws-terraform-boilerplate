@@ -305,7 +305,6 @@ After applying `eks`, add these secrets to your GitHub repository:
 | Secret | Value |
 |--------|-------|
 | `AWS_EKS_ROLE_ARN` | `github_actions_eks_deploy_role_arn` output |
-| `EKS_ACM_CERT_ARN` | `acm_certificate_arn` output |
 | `EKS_DOMAIN_NAME` | e.g. `api.yourdomain.com` |
 
 Then update kubeconfig locally to use kubectl against the cluster:
@@ -332,7 +331,7 @@ After deploying the Helm chart, ExternalDNS automatically creates a CNAME record
 
 ```bash
 kubectl logs -n kube-system -l app.kubernetes.io/name=external-dns --tail=20
-kubectl get gateway backend-gateway
+kubectl get gateway alb
 ```
 
 #### Changing the domain name
@@ -367,7 +366,7 @@ terraform -chdir=terraform/eks output
 terraform -chdir=terraform/eks apply
 ```
 
-Then update `EKS_ACM_CERT_ARN` GitHub secret to the new value. ExternalDNS handles the DNS CNAME automatically.
+ExternalDNS handles the DNS CNAME automatically. The gateway chart is managed by Terraform so the new cert ARN is picked up automatically on apply.
 
 ### Tear down
 

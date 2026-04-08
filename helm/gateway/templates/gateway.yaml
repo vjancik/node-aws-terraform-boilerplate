@@ -1,14 +1,14 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: {{ .Release.Name }}-gateway
+  name: alb
 spec:
   gatewayClassName: aws-lb-controller
   infrastructure:
     parametersRef:
       group: gateway.k8s.aws
       kind: LoadBalancerConfiguration
-      name: {{ .Release.Name }}-alb-config
+      name: alb-config
   listeners:
     - name: http
       protocol: HTTP

@@ -1,0 +1,4 @@
+# ACM wildcard certificate ARN — output from terraform/eks
+certificateArn: ""
+# WAF WebACL ARN — output from terraform/eks
+wafAclArn: ""
