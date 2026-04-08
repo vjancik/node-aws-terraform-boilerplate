@@ -1,5 +1,139 @@
 # Kubernetes Notes
 
+## Useful extensions of current setup
+
+These are not implemented but are well-understood patterns worth adding as the project grows.
+
+### Secrets Store CSI Driver
+
+Mounts AWS Secrets Manager secrets directly into pods as files or env vars, without storing values in Helm `--set` flags or Kubernetes Secrets. The driver syncs the secret from AWS at pod start and optionally creates a K8s Secret object for env var access.
+
+Requires two Helm charts: `secrets-store-csi-driver` (base) + `secrets-store-csi-driver-provider-aws` (AWS provider). A `SecretProviderClass` CRD maps a Secrets Manager secret to a volume mount:
+
+```yaml
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: my-app-secrets
+spec:
+  provider: aws
+  parameters:
+    objects: |
+      - objectName: "my-app/prod"
+        objectType: "secretsmanager"
+        jmesPath:
+          - path: username
+            objectAlias: DB_USER
+          - path: password
+            objectAlias: DB_PASS
+  secretObjects:
+    - secretName: my-app-secret
+      type: Opaque
+      data:
+        - objectName: DB_USER
+          key: username
+        - objectName: DB_PASS
+          key: password
+```
+
+The pod mounts the CSI volume and references the synced K8s Secret as env vars. The app service account needs a Pod Identity association with `secretsmanager:GetSecretValue` + `secretsmanager:DescribeSecret` on the secret ARN.
+
+**When to add:** When secrets need rotation (CSI driver re-fetches on pod restart), or when avoiding secrets in CI/CD pipeline state is a requirement.
+
+### EBS and EFS storage
+
+**EBS CSI Driver** (`aws-ebs-csi-driver` EKS addon) is required for `PersistentVolumeClaim` with `ReadWriteOnce` access — the default `gp2` storage class was removed in EKS 1.30 and must be explicitly defined. Needed for StatefulSets (e.g. a self-hosted database pod). EBS volumes are AZ-scoped — a pod and its volume must be in the same AZ.
+
+**EFS CSI Driver** (`aws-efs-csi-driver` EKS addon) enables `ReadWriteMany` — multiple pods across AZs mounting the same filesystem simultaneously. Useful for shared uploads, session storage, or any workload that needs a shared writable volume. EFS is elastic (no capacity to declare) and billed per GB stored.
+
+Both drivers use Pod Identity for IAM access. EFS also requires mount targets in each subnet and uses the cluster security group for network access.
+
+**When to add:** EBS CSI when adding StatefulSets or a database layer. EFS when multiple pods need to share writable storage.
+
+### HPA dual-metric autoscaling
+
+Our HPA currently scales on CPU only. Adding memory as a second metric catches Node.js workloads that balloon memory before CPU spikes:
+
+```yaml
+metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 70
+```
+
+HPA scales out when either threshold is breached. No additional infrastructure required — metrics-server already provides both.
+
+**When to add:** If memory usage is a scaling signal for your workload (common for Node.js, JVM apps).
+
+### RBAC ClusterRoles for team access
+
+Kubernetes RBAC controls what `kubectl` operations an authenticated identity can perform. The chain is:
+
+```
+IAM Role → EKS Access Entry → Kubernetes Group → ClusterRoleBinding → ClusterRole
+```
+
+A read-only `viewer` role for developers:
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: viewer
+rules:
+  - apiGroups: ["", "apps"]
+    resources: ["pods", "deployments", "services", "configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: viewer-binding
+subjects:
+  - kind: Group
+    name: my-viewer   # matches EKS access entry group
+roleRef:
+  kind: ClusterRole
+  name: viewer
+  apiGroup: rbac.authorization.k8s.io
+```
+
+On the Terraform side, an `aws_eks_access_entry` maps the developer's IAM role to the `my-viewer` Kubernetes group. They can then `aws eks update-kubeconfig` and run read-only `kubectl` commands.
+
+**When to add:** When more than one person needs cluster access with different permission levels.
+
+### Namespace resource quotas
+
+Hard ceilings on CPU, memory, and pod count per namespace — prevents one service from starving others on a shared cluster:
+
+```yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: default-quota
+  namespace: my-service
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    pods: "20"
+```
+
+Requires all pods in the namespace to declare resource `requests` and `limits` — quota enforcement fails open if pods omit them. Pair with a `LimitRange` to set defaults so pods without explicit requests still count against the quota.
+
+**When to add:** When multiple teams or services share the same cluster and cost/stability isolation is needed.
+
 ## Node autoscaling — Karpenter vs alternatives
 
 This project uses Karpenter for EKS node autoscaling. Here's how it compares to the alternatives:
