@@ -3,10 +3,10 @@ name: Build and push backend to ECR
 on:
   push:
     branches: [main]
-    # paths:
-    #   - 'apps/backend/**'
-    #   - 'pnpm-lock.yaml'
-    #   - 'pnpm-workspace.yaml'
+    paths:
+      - 'apps/backend/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
 
 permissions:
   id-token: write   # required for OIDC
