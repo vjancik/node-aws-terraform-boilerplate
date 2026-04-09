@@ -167,6 +167,16 @@ resource "aws_ecs_task_definition" "backend" {
       image     = local.image
       essential = true
 
+      # wget is used here because the container is Alpine-based (curl not included by default).
+      # Switch to curl for debian/slim base images.
+      healthCheck = {
+        command     = ["CMD-SHELL", "wget -qO- http://localhost:${var.container_port}/readyz || exit 1"]
+        interval    = 30
+        timeout     = 5
+        retries     = 3
+        startPeriod = 10
+      }
+
       portMappings = [
         {
           containerPort = var.container_port
