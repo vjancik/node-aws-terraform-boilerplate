@@ -29,7 +29,9 @@ resource "aws_eks_cluster" "main" {
     bootstrap_cluster_creator_admin_permissions = true
   }
 
-  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+  # audit, controllerManager, scheduler disabled — together they exceed the 5GB/month CloudWatch free tier.
+  # Re-enable temporarily for debugging if needed.
+  enabled_cluster_log_types = ["api", "authenticator"]
 
   depends_on = [
     aws_cloudwatch_log_group.eks_cluster,

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'apps/backend/**'
+      - 'helm/backend/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
 
