@@ -6,9 +6,9 @@ image:
 service:
   port: 3000
 
-gateway:
-  # Hostname for the ALB routing rule — passed via --set gateway.host=... at deploy time
-  host: ""
+httproute:
+  # Hostname for the HTTPRoute — passed via --set httproute.hostname=... at deploy time
+  hostname: ""
 
 hpa:
   minReplicas: 1

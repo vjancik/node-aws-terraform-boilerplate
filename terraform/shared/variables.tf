@@ -13,3 +13,8 @@ variable "github_repo" {
   description = "GitHub repository name"
   type        = string
 }
+
+variable "root_domain" {
+  description = "Root domain for the wildcard ACM certificate (e.g. yourdomain.com)"
+  type        = string
+}

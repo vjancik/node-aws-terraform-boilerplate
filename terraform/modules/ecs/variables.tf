@@ -24,7 +24,17 @@ variable "private_subnet_ids" {
 }
 
 variable "domain_name" {
-  description = "Domain name for the ACM certificate and ALB listener"
+  description = "Subdomain this ECS stack serves (used for ALB listener routing)"
+  type        = string
+}
+
+variable "certificate_arn" {
+  description = "ACM wildcard certificate ARN from shared terraform state"
+  type        = string
+}
+
+variable "waf_acl_arn" {
+  description = "Shared WAF WebACL ARN from shared terraform state"
   type        = string
 }
 
@@ -32,6 +42,17 @@ variable "backend_image" {
   description = "Override image URI. If null, preserves the currently deployed image. Set explicitly to deploy a specific image."
   type        = string
   default     = null
+}
+
+variable "web_image" {
+  description = "Override image URI for web. If null, preserves the currently deployed image. Set explicitly to deploy a specific image."
+  type        = string
+  default     = null
+}
+
+variable "web_domain_name" {
+  description = "Subdomain for the web service — used for ALB host-based routing rule (e.g. web.yourdomain.com)"
+  type        = string
 }
 
 variable "container_port" {

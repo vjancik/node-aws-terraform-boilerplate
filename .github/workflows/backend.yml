@@ -1,4 +1,4 @@
-name: Build and push backend to ECR
+name: Backend — build, push, deploy
 
 on:
   push:
@@ -130,7 +130,7 @@ jobs:
             --namespace default \
             --set image.repository=${{ steps.ecr-login.outputs.registry }}/backend \
             --set image.tag=sha-${{ needs.build-push.outputs.short-sha }} \
-            --set gateway.host=${{ secrets.EKS_DOMAIN_NAME }} \
+            --set httproute.hostname=${{ secrets.EKS_BACKEND_DOMAIN_NAME }} \
             --rollback-on-failure \
             --timeout 5m
 

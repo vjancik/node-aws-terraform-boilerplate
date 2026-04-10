@@ -25,8 +25,19 @@ variable "domain_name" {
   type        = string
 }
 
+variable "web_domain_name" {
+  description = "Domain name for the web service (e.g. web.yourdomain.com)"
+  type        = string
+}
+
 variable "backend_image" {
   description = "Override image URI. If null, preserves the currently deployed image. Set explicitly to deploy a specific image."
+  type        = string
+  default     = null
+}
+
+variable "web_image" {
+  description = "Override image URI for web. If null, preserves the currently deployed image."
   type        = string
   default     = null
 }

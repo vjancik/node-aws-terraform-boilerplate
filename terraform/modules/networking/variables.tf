@@ -23,3 +23,9 @@ variable "private_subnet_cidrs" {
   description = "CIDR blocks for private subnets (one per AZ)"
   type        = list(string)
 }
+
+variable "eks_cluster_name" {
+  description = "EKS cluster name — when set, adds kubernetes.io/* tags to subnets for ALB controller autodiscovery"
+  type        = string
+  default     = ""
+}

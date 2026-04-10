@@ -13,23 +13,3 @@ output "github_actions_eks_deploy_role_arn" {
   value       = module.eks.github_actions_eks_deploy_role_arn
 }
 
-output "acm_certificate_arn" {
-  description = "ACM certificate ARN — add this to the Ingress annotation after DNS validation"
-  value       = aws_acm_certificate.main.arn
-}
-
-output "waf_acl_arn" {
-  description = "WAF WebACL ARN — pass to helm deploy as gateway.wafAclArn"
-  value       = aws_wafv2_web_acl.alb.arn
-}
-
-output "acm_certificate_validation_options" {
-  description = "DNS records to create for ACM certificate validation"
-  value = {
-    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
-      name  = dvo.resource_record_name
-      type  = dvo.resource_record_type
-      value = dvo.resource_record_value
-    }
-  }
-}

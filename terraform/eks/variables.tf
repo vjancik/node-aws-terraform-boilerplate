@@ -20,7 +20,3 @@ variable "github_repo" {
   type        = string
 }
 
-variable "domain_name" {
-  description = "Domain name for the ALB Ingress ACM certificate (e.g. api.yourdomain.com)"
-  type        = string
-}

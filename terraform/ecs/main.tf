@@ -27,8 +27,12 @@ module "ecs" {
   public_subnet_ids  = data.terraform_remote_state.shared.outputs.public_subnet_ids
   private_subnet_ids = data.terraform_remote_state.shared.outputs.private_subnet_ids
 
-  domain_name   = var.domain_name
-  backend_image = var.backend_image
+  domain_name     = var.domain_name
+  web_domain_name = var.web_domain_name
+  certificate_arn = data.terraform_remote_state.shared.outputs.acm_wildcard_certificate_arn
+  waf_acl_arn     = data.terraform_remote_state.shared.outputs.waf_acl_arn
+  backend_image   = var.backend_image
+  web_image       = var.web_image
 
   task_execution_role_arn = aws_iam_role.ecs_task_execution.arn
   task_role_arn           = aws_iam_role.ecs_task.arn

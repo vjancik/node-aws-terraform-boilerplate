@@ -44,7 +44,7 @@ provider "kubernetes" {
   }
 }
 
-# ── Read shared state (VPC) ────────────────────────────────────────────────────
+# ── Read shared state (VPC, ACM, WAF) ─────────────────────────────────────────
 
 data "terraform_remote_state" "shared" {
   backend = "local"
@@ -68,122 +68,39 @@ module "eks" {
 }
 
 # ── Tag subnets for ALB controller autodiscovery ───────────────────────────────
-# The ALB controller discovers subnets via these tags.
+# NOTE: These tags are now applied in terraform/shared via the networking module
+# (eks_cluster_name variable) to avoid split-ownership state mismatches — shared
+# owns the subnet resources and would otherwise plan to remove tags it didn't set.
+# If shared and EKS are ever decoupled, move these back here and remove
+# eks_cluster_name from the networking module call in terraform/shared.
 
-resource "aws_ec2_tag" "public_subnet_eks" {
-  for_each    = toset(data.terraform_remote_state.shared.outputs.public_subnet_ids)
-  resource_id = each.value
-  key         = "kubernetes.io/role/elb"
-  value       = "1"
-}
-
-resource "aws_ec2_tag" "public_subnet_cluster" {
-  for_each    = toset(data.terraform_remote_state.shared.outputs.public_subnet_ids)
-  resource_id = each.value
-  key         = "kubernetes.io/cluster/${var.name}"
-  value       = "shared"
-}
-
-resource "aws_ec2_tag" "private_subnet_internal_elb" {
-  for_each    = toset(data.terraform_remote_state.shared.outputs.private_subnet_ids)
-  resource_id = each.value
-  key         = "kubernetes.io/role/internal-elb"
-  value       = "1"
-}
-
-resource "aws_ec2_tag" "private_subnet_cluster" {
-  for_each    = toset(data.terraform_remote_state.shared.outputs.private_subnet_ids)
-  resource_id = each.value
-  key         = "kubernetes.io/cluster/${var.name}"
-  value       = "shared"
-}
-
-# ── WAF ───────────────────────────────────────────────────────────────────────
-# Cost: ~$7/month (WebACL $5 + 2 managed rule groups $1 each)
-# Disable by removing the wafV2 block from lbconfig.yaml and destroying this resource.
-
-resource "aws_wafv2_web_acl" "alb" {
-  name  = "${var.name}-alb-waf"
-  scope = "REGIONAL"
-
-  default_action {
-    allow {}
-  }
-
-  rule {
-    name     = "AWSManagedRulesCommonRuleSet"
-    priority = 1
-    override_action {
-      none {}
-    }
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesCommonRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "CommonRuleSet"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    name     = "AWSManagedRulesKnownBadInputsRuleSet"
-    priority = 2
-    override_action {
-      none {}
-    }
-    statement {
-      managed_rule_group_statement {
-        name        = "AWSManagedRulesKnownBadInputsRuleSet"
-        vendor_name = "AWS"
-      }
-    }
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "KnownBadInputs"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  rule {
-    name     = "RateLimitPerIP"
-    priority = 3
-    action {
-      block {}
-    }
-    statement {
-      rate_based_statement {
-        limit              = 10000
-        aggregate_key_type = "IP"
-      }
-    }
-    visibility_config {
-      cloudwatch_metrics_enabled = true
-      metric_name                = "RateLimit"
-      sampled_requests_enabled   = true
-    }
-  }
-
-  visibility_config {
-    cloudwatch_metrics_enabled = true
-    metric_name                = "${var.name}-alb-waf"
-    sampled_requests_enabled   = true
-  }
-}
-
-# ── ACM certificate ────────────────────────────────────────────────────────────
-
-resource "aws_acm_certificate" "main" {
-  domain_name       = var.domain_name
-  validation_method = "DNS"
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
+# resource "aws_ec2_tag" "public_subnet_eks" {
+#   for_each    = toset(data.terraform_remote_state.shared.outputs.public_subnet_ids)
+#   resource_id = each.value
+#   key         = "kubernetes.io/role/elb"
+#   value       = "1"
+# }
+#
+# resource "aws_ec2_tag" "public_subnet_cluster" {
+#   for_each    = toset(data.terraform_remote_state.shared.outputs.public_subnet_ids)
+#   resource_id = each.value
+#   key         = "kubernetes.io/cluster/${var.name}"
+#   value       = "shared"
+# }
+#
+# resource "aws_ec2_tag" "private_subnet_internal_elb" {
+#   for_each    = toset(data.terraform_remote_state.shared.outputs.private_subnet_ids)
+#   resource_id = each.value
+#   key         = "kubernetes.io/role/internal-elb"
+#   value       = "1"
+# }
+#
+# resource "aws_ec2_tag" "private_subnet_cluster" {
+#   for_each    = toset(data.terraform_remote_state.shared.outputs.private_subnet_ids)
+#   resource_id = each.value
+#   key         = "kubernetes.io/cluster/${var.name}"
+#   value       = "shared"
+# }
 
 # ── metrics-server ─────────────────────────────────────────────────────────────
 # Required for HPA to read pod CPU/memory metrics.
@@ -295,8 +212,8 @@ resource "helm_release" "gateway" {
   chart     = "${path.root}/../../helm/gateway"
 
   set = [
-    { name = "certificateArn", value = aws_acm_certificate.main.arn },
-    { name = "wafAclArn",      value = aws_wafv2_web_acl.alb.arn },
+    { name = "certificateArn", value = data.terraform_remote_state.shared.outputs.acm_wildcard_certificate_arn },
+    { name = "wafAclArn",      value = data.terraform_remote_state.shared.outputs.waf_acl_arn },
   ]
 
   depends_on = [
