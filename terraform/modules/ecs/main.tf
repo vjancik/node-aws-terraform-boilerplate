@@ -95,7 +95,7 @@ resource "aws_lb_target_group" "web" {
   target_type = "ip"
 
   health_check {
-    path                = "/_container/readyz"
+    path                = "/container/readyz"
     healthy_threshold   = 2
     unhealthy_threshold = 3
     interval            = 30
@@ -220,7 +220,7 @@ resource "aws_ecs_task_definition" "web" {
       # wget is used here because the container is Alpine-based (curl not included by default).
       # Switch to curl for debian/slim base images.
       healthCheck = {
-        command     = ["CMD-SHELL", "wget -qO- http://localhost:${var.container_port}/_container/readyz || exit 1"]
+        command     = ["CMD-SHELL", "wget -qO- http://localhost:${var.container_port}/container/readyz || exit 1"]
         interval    = 30
         timeout     = 5
         retries     = 3

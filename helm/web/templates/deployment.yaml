@@ -44,14 +44,14 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:
             httpGet:
-              path: /_container/readyz
+              path: /container/readyz
               port: {{ .Values.service.port }}
             initialDelaySeconds: 15
             periodSeconds: 15
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /_container/readyz
+              path: /container/readyz
               port: {{ .Values.service.port }}
             initialDelaySeconds: 10
             periodSeconds: 10

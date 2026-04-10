@@ -9,7 +9,7 @@ spec:
   defaultConfiguration:
     targetType: ip
     healthCheckConfig:
-      healthCheckPath: /_container/readyz
+      healthCheckPath: /container/readyz
       healthCheckPort: {{ .Values.service.port | quote }}
       healthCheckProtocol: HTTP
       healthCheckInterval: 15
