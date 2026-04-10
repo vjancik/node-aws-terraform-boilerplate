@@ -13,6 +13,10 @@ spec:
       labels:
         app: {{ .Release.Name }}
     spec:
+      # ALB is too slow to register the new pod as healthy before Kubernetes terminates
+      # the old one — preStop sleep keeps the old pod alive long enough for the new
+      # pod to pass ALB health checks and start receiving traffic.
+      terminationGracePeriodSeconds: 45
       containers:
         - name: web
           securityContext:
@@ -21,6 +25,10 @@ spec:
               drop: ["ALL"]
             seccompProfile:
               type: RuntimeDefault
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "30"]
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
@@ -28,8 +36,6 @@ spec:
           env:
             - name: PORT
               value: {{ .Values.service.port | quote }}
-            - name: HOSTNAME
-              value: "0.0.0.0"
             {{- range $key, $val := .Values.env }}
             - name: {{ $key }}
               value: {{ $val | quote }}

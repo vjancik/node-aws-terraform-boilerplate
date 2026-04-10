@@ -242,7 +242,6 @@ resource "aws_ecs_task_definition" "web" {
       environment = [
         { name = "NODE_ENV", value = "production" },
         { name = "PORT", value = tostring(var.container_port) },
-        { name = "HOSTNAME", value = "0.0.0.0" },
       ]
 
       logConfiguration = {

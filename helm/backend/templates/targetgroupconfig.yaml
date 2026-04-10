@@ -12,7 +12,7 @@ spec:
       healthCheckPath: /readyz
       healthCheckPort: {{ .Values.service.port | quote }}
       healthCheckProtocol: HTTP
-      healthCheckInterval: 30
+      healthCheckInterval: 15
       healthyThresholdCount: 2
       unhealthyThresholdCount: 3
     targetGroupAttributes:
