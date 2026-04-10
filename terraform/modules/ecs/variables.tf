@@ -23,8 +23,8 @@ variable "private_subnet_ids" {
   type        = list(string)
 }
 
-variable "domain_name" {
-  description = "Subdomain this ECS stack serves (used for ALB listener routing)"
+variable "backend_domain_name" {
+  description = "Subdomain for the backend service — used for ALB host-based routing rule (e.g. api.yourdomain.com)"
   type        = string
 }
 

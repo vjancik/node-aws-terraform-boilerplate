@@ -15,3 +15,6 @@ spec:
       healthCheckInterval: 30
       healthyThresholdCount: 2
       unhealthyThresholdCount: 3
+    targetGroupAttributes:
+      - key: deregistration_delay.timeout_seconds
+        value: "60"

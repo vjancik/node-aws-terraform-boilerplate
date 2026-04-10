@@ -20,8 +20,8 @@ variable "github_repo" {
   type        = string
 }
 
-variable "domain_name" {
-  description = "Domain name for the ACM certificate and ALB (e.g. api.yourdomain.com)"
+variable "backend_domain_name" {
+  description = "Subdomain for the backend service (e.g. api.yourdomain.com)"
   type        = string
 }
 

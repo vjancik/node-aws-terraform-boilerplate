@@ -133,13 +133,33 @@ resource "aws_lb_listener" "https" {
   certificate_arn = var.certificate_arn
 
   default_action {
+    type = "fixed-response"
+    fixed_response {
+      content_type = "text/plain"
+      message_body = "Not Found"
+      status_code  = "404"
+    }
+  }
+}
+
+# ALB listener rule — route backend subdomain to backend target group
+resource "aws_lb_listener_rule" "backend" {
+  listener_arn = aws_lb_listener.https.arn
+  priority     = 20
+
+  action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.backend.arn
+  }
+
+  condition {
+    host_header {
+      values = [var.backend_domain_name]
+    }
   }
 }
 
 # ALB listener rule — route web subdomain to web target group
-# Default action on the HTTPS listener forwards to backend; web gets a host-based rule.
 resource "aws_lb_listener_rule" "web" {
   listener_arn = aws_lb_listener.https.arn
   priority     = 10
