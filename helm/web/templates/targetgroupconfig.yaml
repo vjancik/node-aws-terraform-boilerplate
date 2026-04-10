@@ -13,8 +13,8 @@ spec:
       healthCheckPort: {{ .Values.service.port | quote }}
       healthCheckProtocol: HTTP
       healthCheckInterval: 15
+      healthyThresholdCount: 2
+      unhealthyThresholdCount: 3
     targetGroupAttributes:
       - key: deregistration_delay.timeout_seconds
         value: "60"
-      healthyThresholdCount: 2
-      unhealthyThresholdCount: 3

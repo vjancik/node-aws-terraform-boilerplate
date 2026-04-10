@@ -60,7 +60,10 @@ resource "aws_iam_role_policy" "github_actions_ecs_deploy" {
           "ecs:UpdateService",
           "ecs:DescribeServices",
         ]
-        Resource = "arn:aws:ecs:${local.region}:${local.account_id}:service/${var.name}/${var.name}-backend"
+        Resource = [
+          "arn:aws:ecs:${local.region}:${local.account_id}:service/${var.name}/${var.name}-backend",
+          "arn:aws:ecs:${local.region}:${local.account_id}:service/${var.name}/${var.name}-web",
+        ]
       },
       {
         Effect   = "Allow"
