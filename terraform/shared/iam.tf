@@ -49,7 +49,7 @@ resource "aws_iam_role" "github_actions" {
   }
 }
 
-# Policy: ECR login + push to backend repo only
+# Policy: ECR login + push to all app repos
 resource "aws_iam_role_policy" "github_actions_ecr" {
   name = "ecr-push"
   role = aws_iam_role.github_actions.id
@@ -73,7 +73,10 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
           "ecr:BatchGetImage",
           "ecr:GetDownloadUrlForLayer",
         ]
-        Resource = aws_ecr_repository.backend.arn
+        Resource = [
+          aws_ecr_repository.backend.arn,
+          aws_ecr_repository.web.arn,
+        ]
       }
     ]
   })

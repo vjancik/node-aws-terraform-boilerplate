@@ -99,6 +99,45 @@ jobs:
           provenance: mode=max
           sbom: true
 
+  deploy-ecs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build-push
+
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ECS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition node-tf-ecs-web \
+            --query taskDefinition \
+            > task-definition.json
+
+      - name: Update image in task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: web
+          image: ${{ steps.ecr-login.outputs.registry }}/web:sha-${{ needs.build-push.outputs.short-sha }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: node-tf-ecs-web
+          cluster: node-tf-ecs
+          wait-for-service-stability: true
+
   deploy-eks:
     runs-on: ubuntu-latest
     timeout-minutes: 10
