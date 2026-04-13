@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { headers } from "next/headers"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { auth } from "@/lib/auth"
@@ -11,7 +12,8 @@ export default async function Home() {
   return (
     <div className="flex min-h-svh flex-col">
       <nav className="flex items-center justify-between px-6 py-4">
-        <Link href="/" className="font-semibold">
+        <Link href="/" className="flex items-center gap-2 font-semibold">
+          <Image src="/vercel.svg" alt="Vercel logo" width={24} height={24} className="invert dark:invert-0" />
           Example Inc.
         </Link>
         <div className="flex items-center gap-2">
