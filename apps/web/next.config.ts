@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
   output: "standalone",
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   // Uncomment to add long-lived cache headers for static assets in public/
   // headers: async () => [
   //   {

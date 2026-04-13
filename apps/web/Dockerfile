@@ -27,6 +27,9 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY apps/web/ apps/web/
 COPY package.json pnpm-workspace.yaml ./
 
+# .env.public contains NEXT_PUBLIC_* vars baked into the client bundle at build time
+COPY apps/web/.env.public apps/web/.env.public
+
 RUN pnpm --filter @repo/web build
 
 # ── Production image ───────────────────────────────────────────────────────────
