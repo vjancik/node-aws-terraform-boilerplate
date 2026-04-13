@@ -3,6 +3,8 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { db } from './client';
 
+// TODO: review performance optimizations before going to production
+// https://better-auth.com/docs/guides/optimizing-for-performance
 export function getAuth(nextApp: boolean = false) {
   return betterAuth({
     database: drizzleAdapter(db, {
