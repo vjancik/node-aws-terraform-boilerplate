@@ -13,8 +13,10 @@ WORKDIR /app
 # Copy manifests first so the install layer is cached independently of source changes
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/backend/package.json apps/backend/
+COPY packages/db/package.json packages/db/
 RUN --mount=type=cache,id=pnpm-${TARGETARCH},target=/pnpm/store pnpm install --frozen-lockfile --filter @repo/backend...
 COPY apps/backend/ apps/backend/
+COPY packages/db/ packages/db/
 RUN pnpm --filter @repo/backend build
 RUN --mount=type=cache,id=pnpm-${TARGETARCH},target=/pnpm/store pnpm deploy --filter @repo/backend --prod /prod/backend
 

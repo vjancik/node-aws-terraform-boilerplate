@@ -6,26 +6,17 @@ ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
 RUN apk add --no-cache libc6-compat
 
-# ── Install dependencies ────────────────────────────────────────────────────────
+# ── Install dependencies & build ───────────────────────────────────────────────
 
-FROM base AS deps
+FROM base AS builder
 ARG TARGETARCH
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/web/package.json apps/web/
+COPY apps/web/ apps/web/
+COPY packages/db/ packages/db/
 
 RUN --mount=type=cache,id=pnpm-${TARGETARCH},target=/pnpm/store pnpm install --frozen-lockfile --filter @repo/web...
-
-# ── Build ──────────────────────────────────────────────────────────────────────
-
-FROM base AS builder
-WORKDIR /app
-
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY apps/web/ apps/web/
-COPY package.json pnpm-workspace.yaml ./
 
 # .env.public contains NEXT_PUBLIC_* vars baked into the client bundle at build time
 COPY apps/web/.env.public apps/web/.env.public
