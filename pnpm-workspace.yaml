@@ -1,8 +1,15 @@
 packages:
   - "apps/*"
-injectWorkspacePackages: true
+  - "packages/*"
 allowBuilds:
   '@nestjs/core': true
   esbuild: true
-  unrs-resolver: true
+  msw: true
   sharp: true
+  unrs-resolver: true
+
+catalog:
+  "@types/node": "^24"
+  typescript: "^6"
+
+injectWorkspacePackages: true

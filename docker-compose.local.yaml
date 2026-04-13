@@ -1,0 +1,81 @@
+# Local development stack — mirrors production roles and database setup.
+# Postgres runs with a master user (postgres) for running setup-db.sql,
+# and expects app/migrator users to be created via scripts/admin/setup-db.sql.
+#
+# Usage:
+#   docker compose -f docker-compose.local.yaml up --build
+#
+# Connect as master (to run setup-db.sql):
+#   docker compose -f docker-compose.local.yaml exec db psql -U postgres -d app
+
+services:
+
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: app
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - "5438:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./scripts/admin:/scripts   # mounts setup-db.sql for easy access inside the container
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrator:
+    build:
+      context: .
+      dockerfile: packages/db/Dockerfile.migrator
+    environment:
+      DATABASE_URL: postgresql://migrator:migratorpassword@db:5432/app
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    ports:
+      - "3005:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://app:apppassword@db:5432/app
+    depends_on:
+      db:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3006:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      DATABASE_URL: postgresql://app:apppassword@db:5432/app
+    depends_on:
+      db:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+      backend:
+        condition: service_started
+
+volumes:
+  db-data:

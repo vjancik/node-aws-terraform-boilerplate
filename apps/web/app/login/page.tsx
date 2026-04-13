@@ -1,8 +1,7 @@
-"use client"
-
 import Link from "next/link"
-import { LoginForm } from "@/components/login-form"
 import { GalleryVerticalEndIcon } from "lucide-react"
+import { LoginForm } from "@/components/login-form"
+import { signIn } from "@/app/actions/auth"
 
 export default function LoginPage() {
   return (
@@ -14,7 +13,7 @@ export default function LoginPage() {
           </div>
           Example Inc.
         </Link>
-        <LoginForm />
+        <LoginForm action={signIn} />
       </div>
     </div>
   )

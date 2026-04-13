@@ -13,6 +13,10 @@ A monorepo example project using pnpm workspaces + Turborepo, with a NestJS back
   - [Start (production)](#start-production)
   - [Adding dependencies](#adding-dependencies)
   - [Running arbitrary turbo tasks](#running-arbitrary-turbo-tasks)
+- [Local Docker Compose](#local-docker-compose)
+  - [Start / stop the stack](#start--stop-the-stack)
+  - [First-time database setup](#first-time-database-setup)
+  - [Run migrations on demand](#run-migrations-on-demand)
 - [Deployment](#deployment)
   - [Prerequisites](#prerequisites-1)
   - [AWS authentication](#aws-authentication)
@@ -120,6 +124,50 @@ pnpm turbo run <task>                        # run a task across all packages
 pnpm turbo run <task> --filter=@repo/backend # run a task in one package only
 ```
 
+## Local Docker Compose
+
+Mirrors production roles and database setup locally.
+
+### Start / stop the stack
+
+```bash
+pnpm compose:up    # build images, start all services in the background, and wait until healthy
+pnpm compose:down  # stop and remove containers
+```
+
+To start only the database:
+
+```bash
+docker compose -f docker-compose.local.yaml up db
+```
+
+### First-time database setup
+
+Run once after the DB container is up to create the `migrator` and `app` roles:
+
+```bash
+docker compose -f docker-compose.local.yaml exec db psql -U postgres -d app -f /scripts/setup-db.sql
+```
+
+Then set real passwords (prompted securely, not logged):
+
+```bash
+docker compose -f docker-compose.local.yaml exec db psql -U postgres -d app
+```
+
+```sql
+\password migrator
+\password app
+```
+
+> If you change the passwords, update `DATABASE_URL` in `docker-compose.local.yaml` to match.
+
+### Run migrations on demand
+
+```bash
+docker compose -f docker-compose.local.yaml run --rm migrator
+```
+
 ## Deployment
 
 Infrastructure is managed with Terraform in the `terraform/` directory. All commands below should be run from that directory.
@@ -131,7 +179,7 @@ Infrastructure is managed with Terraform in the `terraform/` directory. All comm
 
 ### AWS authentication
 
-Terraform uses the AWS CLI credentials chain. Log in before running any Terraform commands:
+Terraform uses the AWS CLI credentials chain. Sign in before running any Terraform commands:
 
 ```bash
 # SSO (recommended)

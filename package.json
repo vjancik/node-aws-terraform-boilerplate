@@ -10,7 +10,9 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "helm:lint": "helm lint helm/*",
-    "tf:validate": "terraform -chdir=terraform/shared validate && terraform -chdir=terraform/ecs validate && terraform -chdir=terraform/eks validate"
+    "tf:validate": "terraform -chdir=terraform/shared validate && terraform -chdir=terraform/ecs validate && terraform -chdir=terraform/eks validate",
+    "compose:up": "docker compose -f docker-compose.local.yaml up --build -d --wait",
+    "compose:down": "docker compose -f docker-compose.local.yaml down"
   },
   "devDependencies": {
     "turbo": "^2.9.3"

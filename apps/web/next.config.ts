@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ["@repo/db"],
   reactCompiler: true,
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../../"),
