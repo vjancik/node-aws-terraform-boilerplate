@@ -10,6 +10,7 @@ allowBuilds:
 
 catalog:
   "@types/node": "^24"
+  better-auth: "^1.6.2"
   typescript: "^6"
 
 injectWorkspacePackages: true
