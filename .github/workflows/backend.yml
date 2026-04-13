@@ -8,6 +8,7 @@ on:
       - 'helm/backend/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - '.github/workflows/backend.yml'
 
 permissions:
   id-token: write   # required for OIDC

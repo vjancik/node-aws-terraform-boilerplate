@@ -9,6 +9,7 @@ on:
       - 'helm/web/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - '.github/workflows/web.yml'
 
 permissions:
   id-token: write   # required for OIDC
@@ -20,7 +21,7 @@ env:
 jobs:
   build-push:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     outputs:
       short-sha: ${{ steps.sha.outputs.short }}
 
