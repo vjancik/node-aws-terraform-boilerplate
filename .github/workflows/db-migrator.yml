@@ -1,0 +1,99 @@
+name: DB Migrator — build, push
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/db/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/db-migrator.yml'
+
+permissions:
+  id-token: write   # required for OIDC
+  contents: read
+
+env:
+  SHA_LENGTH: 7
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      short-sha: ${{ steps.sha.outputs.short }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Get short SHA
+        id: sha
+        run: echo "short=${GITHUB_SHA::${{ env.SHA_LENGTH }}}" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Login to ECR
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        id: setup-buildx
+
+      - name: Cache pnpm store (amd64)
+        uses: actions/cache@v5
+        with:
+          path: pnpm-store-amd64
+          key: pnpm-store-amd64-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-amd64-
+
+      - name: Cache pnpm store (arm64)
+        uses: actions/cache@v5
+        with:
+          path: pnpm-store-arm64
+          key: pnpm-store-arm64-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-arm64-
+
+      - name: Restore pnpm store into BuildKit
+        uses: vjancik/buildkit-cache-dance@v1
+        with:
+          builder: ${{ steps.setup-buildx.outputs.name }}
+          cache-map: |
+            {
+              "pnpm-store-amd64": { "target": "/pnpm/store", "id": "pnpm-amd64" },
+              "pnpm-store-arm64": { "target": "/pnpm/store", "id": "pnpm-arm64" }
+            }
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.ecr-login.outputs.registry }}/db-migrator
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+        env:
+          DOCKER_METADATA_SHORT_SHA_LENGTH: ${{ env.SHA_LENGTH }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: packages/db/Dockerfile.migrator
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
