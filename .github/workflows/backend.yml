@@ -136,6 +136,7 @@ jobs:
             --timeout 5m
 
   deploy-ecs:
+    if: false # ECS stack is currently torn down — re-enable when needed
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: build-push
