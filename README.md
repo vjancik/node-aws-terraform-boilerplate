@@ -1,6 +1,12 @@
 # Node AWS Terraform Boilerplate (WIP)
 
-A monorepo example project using pnpm workspaces + Turborepo, with a NestJS backend and a placeholder web app. Infrastructure is managed with Terraform targeting AWS EKS (with Helm) or ECS.
+A monorepo boilerplate project using pnpm workspaces + Turborepo, with a NestJS backend (WIP) and a Next.js web app featuring social sign-in (Google, GitHub, Discord) and email/password authentication via Better-Auth. Infrastructure is managed with Terraform targeting AWS EKS (with Helm) or ECS Fargate, including:
+
+- Amazon RDS Postgres with RDS Proxy for connection pooling
+- ECS SSM bastion and custom db-migrator image for schema management with minimal-privilege roles
+- Horizontal auto-scaling (Karpenter on EKS, ECS service auto-scaling on Fargate)
+- Secrets management via AWS Secrets Manager (External Secrets Operator on EKS)
+- Automated external DNS subdomain management with ExternalDNS (Cloudflare provider)
 
 ## Table of Contents
 
@@ -35,19 +41,25 @@ A monorepo example project using pnpm workspaces + Turborepo, with a NestJS back
 ```
 apps/
   backend/       # NestJS HTTP server
-  web/           # placeholder (unused)
+  web/           # Next.js web app — Better-Auth (social + email/password sign-in)
 docs/
+  aws.md         # Secrets Manager setup, ECS injection, EKS ESO sync
   kubernetes.md  # Karpenter, autoscaling, Gateway API notes
   terraform.md   # ENI limits, two-pass apply, init flags
   todo.md        # planned improvements
 helm/
-  backend/       # Helm chart for the backend app (EKS)
+  backend/       # Helm chart for the backend (EKS)
+  web/           # Helm chart for the web app (EKS)
+  gateway/       # Shared ALB Gateway (EKS)
 scripts/
+  admin/         # connect-db.sh (SSM bastion), migrate-db.sh, setup-db.sql
   load-testing/  # k6 load test scripts and HTML reports
 terraform/
-  shared/        # VPC, ECR, GitHub OIDC — shared between ECS and EKS
+  shared/        # VPC, ECR, ACM, WAF, Secrets Manager, GitHub OIDC — shared between ECS and EKS
   ecs/           # ECS Fargate stack
-  eks/           # EKS + Karpenter stack
+  eks/           # EKS + Karpenter + ESO + ExternalDNS stack
+  database/      # RDS Postgres + RDS Proxy
+  bastion/       # ECS SSM bastion + db-migrator task definitions
   modules/
     ecs/         # ECS module
     eks/         # EKS module
@@ -58,7 +70,6 @@ terraform/
 
 - Node.js >= 18
 - pnpm >= 10
-- Turborepo (installed as a dev dependency — no global install needed)
 
 ## Setup
 
@@ -176,6 +187,9 @@ Infrastructure is managed with Terraform in the `terraform/` directory. All comm
 
 - [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html) >= 2
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
+- [kubectl](https://kubernetes.io/docs/tasks/tools/) — EKS deployments and cluster management
+- [Helm](https://helm.sh/docs/intro/install/) >= 3 — EKS app deployments
+- [jq](https://jqlang.org/download/) — used by admin scripts
 
 ### AWS authentication
 
@@ -202,10 +216,12 @@ Terraform is split into independent root modules. Apply them in order:
 
 ```
 terraform/
-  shared/   # VPC, ECR, GitHub OIDC IAM — apply first, never destroy while other layers exist
-  ecs/      # ECS Fargate cluster, ALB, ACM, auto scaling — depends on shared/
-  eks/      # EKS cluster, Karpenter, ALB controller, ExternalDNS, metrics-server — depends on shared/
-  modules/  # reusable modules, not applied directly
+  shared/    # VPC, ECR, ACM, WAF, Secrets Manager, GitHub OIDC — apply first, never destroy while other layers exist
+  database/  # RDS Postgres + RDS Proxy — depends on shared/
+  bastion/   # ECS SSM bastion + db-migrator task definitions — depends on shared/
+  ecs/       # ECS Fargate cluster, ALB, auto scaling — depends on shared/
+  eks/       # EKS cluster, Karpenter, ESO, ExternalDNS — depends on shared/
+  modules/   # reusable modules, not applied directly
 ```
 
 ### Configure variables
@@ -216,6 +232,7 @@ Each root module has its own `terraform.tfvars`. Copy the example and fill in th
 cp terraform/shared/terraform.tfvars.example terraform/shared/terraform.tfvars
 cp terraform/ecs/terraform.tfvars.example terraform/ecs/terraform.tfvars
 cp terraform/eks/terraform.tfvars.example terraform/eks/terraform.tfvars
+cp terraform/database/terraform.tfvars.example terraform/database/terraform.tfvars
 ```
 
 ### Init
@@ -226,6 +243,8 @@ Run once per module after cloning, or after adding new providers/modules:
 terraform -chdir=terraform/shared init
 terraform -chdir=terraform/ecs init
 terraform -chdir=terraform/eks init
+terraform -chdir=terraform/database init
+terraform -chdir=terraform/bastion init
 ```
 
 ### Plan (dry run)
@@ -236,6 +255,8 @@ Preview what Terraform will create, change, or destroy — no changes are applie
 terraform -chdir=terraform/shared plan
 terraform -chdir=terraform/ecs plan
 terraform -chdir=terraform/eks plan
+terraform -chdir=terraform/database plan
+terraform -chdir=terraform/bastion plan
 ```
 
 ### Apply
@@ -247,6 +268,15 @@ terraform -chdir=terraform/shared apply
 ```
 
 After applying `shared`, copy the `github_actions_role_arn` output to your GitHub repository secrets as `AWS_ROLE_ARN`.
+
+Then apply `database` and `bastion` (both are single-pass):
+
+```bash
+terraform -chdir=terraform/database apply
+terraform -chdir=terraform/bastion apply
+```
+
+After applying `database`, populate the app secrets in Secrets Manager — see [docs/aws.md](docs/aws.md). After applying `bastion`, run `scripts/admin/connect-db.sh` to provision database roles via `setup-db.sql`.
 
 Then apply ECS or EKS — both require a two-pass apply, see the sections below for the exact commands.
 
@@ -417,11 +447,13 @@ ExternalDNS handles the DNS CNAME automatically. The gateway chart is managed by
 
 ### Tear down
 
-Destroy in reverse order — always destroy ECS/EKS before shared:
+Destroy in reverse order — always destroy dependent stacks before shared:
 
 ```bash
 terraform -chdir=terraform/ecs destroy
 terraform -chdir=terraform/eks destroy
+terraform -chdir=terraform/bastion destroy
+terraform -chdir=terraform/database destroy
 terraform -chdir=terraform/shared destroy
 ```
 
