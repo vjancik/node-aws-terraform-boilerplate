@@ -94,3 +94,13 @@ variable "task_role_arn" {
   description = "IAM role ARN for the running task (AWS API access)"
   type        = string
 }
+
+variable "secret_arn_web" {
+  description = "Secrets Manager ARN for web container secrets (injected as env vars at container start)"
+  type        = string
+}
+
+variable "secret_arn_backend" {
+  description = "Secrets Manager ARN for backend container secrets (injected as env vars at container start)"
+  type        = string
+}

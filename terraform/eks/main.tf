@@ -243,6 +243,97 @@ resource "helm_release" "karpenter" {
   depends_on = [module.eks]
 }
 
+# ── External Secrets Operator ─────────────────────────────────────────────────
+# ESO watches ExternalSecret CRDs and syncs values from Secrets Manager into
+# native Kubernetes Secrets. Pods consume plain envFrom/secretRef — no awareness
+# of ESO or AWS at the pod level.
+
+resource "aws_iam_role" "eso" {
+  name = "${var.name}-eks-eso"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "pods.eks.amazonaws.com" }
+      Action    = ["sts:AssumeRole", "sts:TagSession"]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "eso_secrets" {
+  name = "read-app-secrets"
+  role = aws_iam_role.eso.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+      ]
+      Resource = [
+        data.terraform_remote_state.shared.outputs.secret_arn_web,
+        data.terraform_remote_state.shared.outputs.secret_arn_backend,
+      ]
+    }]
+  })
+}
+
+resource "aws_eks_pod_identity_association" "eso" {
+  cluster_name    = module.eks.cluster_name
+  namespace       = "external-secrets"
+  service_account = "external-secrets"
+  role_arn        = aws_iam_role.eso.arn
+
+  depends_on = [module.eks]
+}
+
+resource "helm_release" "external_secrets_operator" {
+  name             = "external-secrets"
+  namespace        = "external-secrets"
+  create_namespace = true
+  repository       = "https://charts.external-secrets.io"
+  chart            = "external-secrets"
+  version          = "2.3.0"
+
+  set = [
+    { name = "installCRDs", value = "true" },
+  ]
+
+  depends_on = [module.eks]
+}
+
+# ClusterSecretStore — cluster-wide bridge from ESO to AWS Secrets Manager.
+# Uses Pod Identity (the eso IAM role) for auth — no static credentials.
+resource "kubernetes_manifest" "cluster_secret_store" {
+  manifest = {
+    apiVersion = "external-secrets.io/v1"
+    kind       = "ClusterSecretStore"
+    metadata = {
+      name = "aws-secrets-manager"
+    }
+    spec = {
+      provider = {
+        aws = {
+          service = "SecretsManager"
+          region  = var.aws_region
+          auth = {
+            # Pod Identity injects credentials via the node's instance metadata —
+            # no serviceAccountRef needed when using EKS Pod Identity.
+          }
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    helm_release.external_secrets_operator,
+    aws_eks_pod_identity_association.eso,
+  ]
+}
+
 # ── Karpenter NodePool + EC2NodeClass ──────────────────────────────────────────
 # Defines what Karpenter can launch: ARM Graviton spot + on-demand,
 # cheapest small instance types, spread equally across AZs.

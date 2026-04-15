@@ -45,3 +45,13 @@ output "waf_acl_arn" {
   description = "Shared WAF WebACL ARN — attach to ECS and EKS ALBs"
   value       = aws_wafv2_web_acl.main.arn
 }
+
+output "secret_arn_web" {
+  description = "Secrets Manager ARN for web container secrets"
+  value       = aws_secretsmanager_secret.web.arn
+}
+
+output "secret_arn_backend" {
+  description = "Secrets Manager ARN for backend container secrets"
+  value       = aws_secretsmanager_secret.backend.arn
+}

@@ -245,6 +245,21 @@ resource "aws_ecs_task_definition" "web" {
         { name = "HOSTNAME", value = "0.0.0.0" },
       ]
 
+      # Secrets are fetched from Secrets Manager by the ECS agent at container start
+      # and injected as individual env vars. The secret value must be a JSON object
+      # whose keys match the env var names. See docs/aws.md for how to populate.
+      secrets = [
+        { name = "DATABASE_URL",          valueFrom = "${var.secret_arn_web}:DATABASE_URL::" },
+        { name = "BETTER_AUTH_SECRET",    valueFrom = "${var.secret_arn_web}:BETTER_AUTH_SECRET::" },
+        { name = "BETTER_AUTH_URL",       valueFrom = "${var.secret_arn_web}:BETTER_AUTH_URL::" },
+        { name = "GITHUB_CLIENT_ID",      valueFrom = "${var.secret_arn_web}:GITHUB_CLIENT_ID::" },
+        { name = "GITHUB_CLIENT_SECRET",  valueFrom = "${var.secret_arn_web}:GITHUB_CLIENT_SECRET::" },
+        { name = "GOOGLE_CLIENT_ID",      valueFrom = "${var.secret_arn_web}:GOOGLE_CLIENT_ID::" },
+        { name = "GOOGLE_CLIENT_SECRET",  valueFrom = "${var.secret_arn_web}:GOOGLE_CLIENT_SECRET::" },
+        { name = "DISCORD_CLIENT_ID",     valueFrom = "${var.secret_arn_web}:DISCORD_CLIENT_ID::" },
+        { name = "DISCORD_CLIENT_SECRET", valueFrom = "${var.secret_arn_web}:DISCORD_CLIENT_SECRET::" },
+      ]
+
       logConfiguration = {
         logDriver = "awslogs"
         options = {
@@ -386,6 +401,10 @@ resource "aws_ecs_task_definition" "backend" {
         { name = "NODE_ENV", value = "production" },
         { name = "PORT", value = tostring(var.container_port) },
         { name = "NO_COLOR", value = "1" }
+      ]
+
+      secrets = [
+        { name = "DATABASE_URL", valueFrom = "${var.secret_arn_backend}:DATABASE_URL::" },
       ]
 
       logConfiguration = {

@@ -26,3 +26,6 @@ resources:
 env:
   NODE_ENV: production
   NO_COLOR: "1"
+
+secrets:
+  secretManagerKey: /node-tf/web  # matches terraform/shared/secrets.tf

@@ -326,25 +326,24 @@ After applying `ecs`, add the ALB DNS name as a CNAME for your domain in your DN
 
 #### EKS: two-pass apply required
 
-The Karpenter `NodePool` and `EC2NodeClass` resources are Kubernetes CRDs installed by the Karpenter Helm chart. The `kubernetes_manifest` Terraform resources that create them require the CRDs to already exist in the cluster API at **plan time**, not just apply time — so they cannot be created in the same pass as the Helm chart itself.
+The Karpenter `NodePool` and `EC2NodeClass` resources, and the ESO `ClusterSecretStore`, are Kubernetes CRDs installed by their respective Helm charts. The `kubernetes_manifest` Terraform resources that create them require the CRDs to already exist in the cluster API at **plan time**, not just apply time — so they cannot be created in the same pass as the Helm charts themselves.
 
 Apply in two passes:
 
 ```bash
-# Pass 1: cluster + Helm charts (metrics-server, ALB controller, Karpenter)
+# Pass 1: cluster + Helm charts (metrics-server, ALB controller, Karpenter, ESO)
 terraform -chdir=terraform/eks apply \
   -target=module.eks \
-  -target=aws_ec2_tag.public_subnet_eks \
-  -target=aws_ec2_tag.public_subnet_cluster \
-  -target=aws_ec2_tag.private_subnet_internal_elb \
-  -target=aws_ec2_tag.private_subnet_cluster \
-  -target=aws_acm_certificate.main \
+  -target=aws_iam_role.eso \
+  -target=aws_iam_role_policy.eso_secrets \
+  -target=aws_eks_pod_identity_association.eso \
   -target=helm_release.metrics_server \
   -target=kubernetes_service_account_v1.alb_controller \
   -target=helm_release.alb_controller \
-  -target=helm_release.karpenter
+  -target=helm_release.karpenter \
+  -target=helm_release.external_secrets_operator
 
-# Pass 2: Karpenter NodePool + EC2NodeClass (CRDs now registered)
+# Pass 2: Karpenter NodePool + EC2NodeClass + ClusterSecretStore (CRDs now registered)
 terraform -chdir=terraform/eks apply
 ```
 
@@ -432,6 +431,7 @@ See [scripts/load-testing/README.md](scripts/load-testing/README.md) for run com
 
 ## Further reading
 
+- [docs/aws.md](docs/aws.md) — Secrets Manager setup, populating secrets, ECS injection and EKS ESO sync, rotation procedure
 - [docs/kubernetes.md](docs/kubernetes.md) — Karpenter debugging, node autoscaling trade-offs, Gateway API conflict detection
 - [docs/terraform.md](docs/terraform.md) — ENI pod density limits, prefix delegation, terraform init -upgrade
 - [docs/managed-kubernetes-cost-analysis.md](docs/managed-kubernetes-cost-analysis.md) — EKS vs GKE vs AKS cost comparison, NAT gateway, load balancer alternatives

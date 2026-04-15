@@ -36,4 +36,7 @@ module "ecs" {
 
   task_execution_role_arn = aws_iam_role.ecs_task_execution.arn
   task_role_arn           = aws_iam_role.ecs_task.arn
+
+  secret_arn_web     = data.terraform_remote_state.shared.outputs.secret_arn_web
+  secret_arn_backend = data.terraform_remote_state.shared.outputs.secret_arn_backend
 }

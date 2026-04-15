@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 
+// NOTE: optional advanced forms with shadcn components: https://www.shadcn-form.com/playground
+
 export function SignupForm({
   className,
   signupAction,

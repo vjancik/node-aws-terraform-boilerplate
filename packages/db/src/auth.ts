@@ -3,6 +3,12 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
 import { db } from './client';
 
+// NOTE: rate limiting — Better Auth's built-in rateLimit only applies to client-side API
+// routes (/api/auth/*). Server actions and server-side API routes bypass it entirely and
+// need their own rate limiting (e.g. per-route middleware, Upstash Ratelimit, or an edge
+// layer). The defaults below also need tuning for production traffic patterns.
+// https://better-auth.com/docs/concepts/rate-limit
+//
 // TODO: review performance optimizations before going to production
 // https://better-auth.com/docs/guides/optimizing-for-performance
 // NOTE: email/password accounts do NOT link to existing SSO accounts (Google, GitHub, Discord)

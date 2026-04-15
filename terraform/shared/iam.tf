@@ -76,6 +76,7 @@ resource "aws_iam_role_policy" "github_actions_ecr" {
         Resource = [
           aws_ecr_repository.backend.arn,
           aws_ecr_repository.web.arn,
+          aws_ecr_repository.db_migrator.arn,
         ]
       }
     ]

@@ -4,6 +4,7 @@
 --   app      — DML only (SELECT/INSERT/UPDATE/DELETE), used by the runtime app
 --
 -- Passwords are set interactively via \password to avoid appearing in logs or history.
+-- Must be run as the RDS master user (db_username in terraform.tfvars).
 --
 -- Usage (from inside the connect-db.sh session):
 --   \i setup-db.sql
@@ -53,7 +54,11 @@ GRANT USAGE ON SCHEMA public TO app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app;
 
--- Ensure app gets the same permissions on future tables created by migrator
+-- ALTER DEFAULT PRIVILEGES FOR ROLE x requires the current user to be a member of x.
+-- Grant master user membership in migrator so the default privilege applies correctly.
+GRANT migrator TO adminuser;
+
+-- Ensure app gets the same permissions on all future tables created by migrator
 ALTER DEFAULT PRIVILEGES FOR ROLE migrator IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app;
 

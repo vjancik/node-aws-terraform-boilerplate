@@ -56,6 +56,9 @@ spec:
             - name: {{ $key }}
               value: {{ $val | quote }}
             {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ .Release.Name }}-secrets
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           livenessProbe:

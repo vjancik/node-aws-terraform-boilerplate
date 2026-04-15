@@ -104,6 +104,26 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Allow the ECS agent to read app secrets at container start
+resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
+  name = "read-app-secrets"
+  role = aws_iam_role.ecs_task_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "secretsmanager:GetSecretValue"
+        Resource = [
+          data.terraform_remote_state.shared.outputs.secret_arn_web,
+          data.terraform_remote_state.shared.outputs.secret_arn_backend,
+        ]
+      }
+    ]
+  })
+}
+
 # ECS Task Role (assumed by the running container — attach policies here as needed)
 resource "aws_iam_role" "ecs_task" {
   name = "ecs-task"
