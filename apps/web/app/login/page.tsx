@@ -13,7 +13,7 @@ export default function LoginPage() {
           </div>
           Example Inc.
         </Link>
-        <LoginForm action={signIn} />
+        <LoginForm loginAction={signIn} />
       </div>
     </div>
   )

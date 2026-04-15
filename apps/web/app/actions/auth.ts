@@ -3,10 +3,12 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { validatePassword } from "@/lib/validation";
 import { APIError } from "better-auth/api";
 
 export type AuthState = {
-  error?: string;
+  errors?: string[];
+  email?: string;
 } | undefined;
 
 export async function signIn(
@@ -23,9 +25,9 @@ export async function signIn(
     });
   } catch (e) {
     if (e instanceof APIError) {
-      return { error: e.message };
+      return { errors: [e.message], email };
     }
-    return { error: "Something went wrong. Please try again." };
+    return { errors: ["Something went wrong. Please try again."], email };
   }
 
   redirect("/");
@@ -39,8 +41,13 @@ export async function signUp(
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirm-password") as string;
 
+  const validation = validatePassword(password, "The password must have");
+  if (validation.status === "error") {
+    return { errors: validation.errors, email };
+  }
+
   if (password !== confirmPassword) {
-    return { error: "Passwords do not match." };
+    return { errors: ["Passwords do not match."], email };
   }
 
   try {
@@ -50,9 +57,9 @@ export async function signUp(
     });
   } catch (e) {
     if (e instanceof APIError) {
-      return { error: e.message };
+      return { errors: [e.message], email };
     }
-    return { error: "Something went wrong. Please try again." };
+    return { errors: ["Something went wrong. Please try again."], email };
   }
 
   redirect("/");

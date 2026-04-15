@@ -178,6 +178,9 @@ function FieldError({
 }: React.ComponentProps<"div"> & {
   errors?: Array<{ message?: string } | undefined>
 }) {
+  // React Compiler (React 19+) memoizes this automatically.
+  // For pre-React 19, wrap getContent in useMemo with [children, errors] deps
+  // to avoid creating new array references on every render.
   const getContent = () => {
     if (children) {
       return children

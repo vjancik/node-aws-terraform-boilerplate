@@ -1,6 +1,8 @@
 "use client"
 
 import { useActionState } from "react"
+import { useDebouncedState } from "@/lib/hooks"
+import { validatePassword } from "@/lib/validation"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { authClient } from "@/lib/auth-client"
@@ -16,6 +18,7 @@ import {
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
@@ -24,14 +27,26 @@ import { Input } from "@/components/ui/input"
 
 export function SignupForm({
   className,
-  action,
+  signupAction,
+  validationDebounceMs = 500,
   loginUrl = "/login",
   ...props
 }: React.ComponentProps<"div"> & {
-  action: (prev: AuthState, formData: FormData) => Promise<AuthState>
+  signupAction: (prev: AuthState, formData: FormData) => Promise<AuthState>
+  validationDebounceMs?: number
   loginUrl?: string
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined)
+  const [state, formAction, pending] = useActionState(signupAction, undefined)
+  const [password, committedPassword, setPassword] = useDebouncedState("", validationDebounceMs)
+  const [confirmPassword, committedConfirmPassword, setConfirmPassword] = useDebouncedState("", validationDebounceMs)
+
+  const passwordValidation = committedPassword.length > 0 ? validatePassword(committedPassword) : null
+  const passwordInvalid = passwordValidation?.status === "error"
+  const passwordErrors = passwordInvalid
+    ? passwordValidation.errors.map(e => ({ message: e }))
+    : undefined
+  const passwordMismatch = committedConfirmPassword.length > 0 && committedPassword !== committedConfirmPassword
+  const canSubmit = !pending && !passwordInvalid && !passwordMismatch;
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -97,22 +112,39 @@ export function SignupForm({
                     name="email"
                     type="email"
                     placeholder="you@example.com"
+                    defaultValue={state?.email}
                     required
                   />
                 </Field>
-                <Field>
+                <Field data-invalid={passwordInvalid || undefined}>
                   <FieldLabel htmlFor="password">Password</FieldLabel>
-                  <Input id="password" name="password" type="password" required />
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                  />
+                  <FieldError errors={passwordErrors} />
                 </Field>
-                <Field>
+                <Field data-invalid={passwordMismatch || undefined}>
                   <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
-                  <Input id="confirm-password" name="confirm-password" type="password" required />
+                  <Input
+                    id="confirm-password"
+                    name="confirm-password"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  {passwordMismatch && (
+                    <FieldError>Passwords do not match.</FieldError>
+                  )}
                 </Field>
-                {state?.error && (
-                  <p className="text-sm text-destructive">{state.error}</p>
-                )}
+                <FieldError errors={state?.errors?.map(e => ({ message: e }))} />
                 <Field>
-                  <Button type="submit" disabled={pending}>
+                  <Button type="submit" disabled={!canSubmit}>
                     {pending ? "Creating account..." : "Create Account"}
                   </Button>
                   <FieldDescription className="text-center">

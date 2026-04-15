@@ -16,6 +16,7 @@ import {
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
@@ -24,16 +25,16 @@ import { Input } from "@/components/ui/input"
 
 export function LoginForm({
   className,
-  action,
+  loginAction,
   signUpUrl = "/signup",
   forgotPasswordUrl = "#",
   ...props
 }: React.ComponentProps<"div"> & {
-  action: (prev: AuthState, formData: FormData) => Promise<AuthState>
+  loginAction: (prev: AuthState, formData: FormData) => Promise<AuthState>
   signUpUrl?: string
   forgotPasswordUrl?: string
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined)
+  const [state, formAction, pending] = useActionState(loginAction, undefined)
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -99,6 +100,7 @@ export function LoginForm({
                     name="email"
                     type="email"
                     placeholder="you@example.com"
+                    defaultValue={state?.email}
                     required
                   />
                 </Field>
@@ -114,9 +116,7 @@ export function LoginForm({
                   </div>
                   <Input id="password" name="password" type="password" required />
                 </Field>
-                {state?.error && (
-                  <p className="text-sm text-destructive">{state.error}</p>
-                )}
+                <FieldError errors={state?.errors?.map(e => ({ message: e }))} />
                 <Field>
                   <Button type="submit" disabled={pending}>
                     {pending ? "Signing in..." : "Sign In"}

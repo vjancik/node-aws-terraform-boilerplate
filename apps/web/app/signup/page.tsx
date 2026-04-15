@@ -2,7 +2,6 @@ import Link from "next/link"
 import { GalleryVerticalEndIcon } from "lucide-react"
 import { SignupForm } from "@/components/signup-form"
 import { signUp } from "@/app/actions/auth"
-
 export default function SignupPage() {
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
@@ -13,7 +12,11 @@ export default function SignupPage() {
           </div>
           Example Inc.
         </Link>
-        <SignupForm action={signUp} loginUrl="/login" />
+        <SignupForm
+          signupAction={signUp}
+          validationDebounceMs={500}
+          loginUrl="/login"
+        />
       </div>
     </div>
   )
