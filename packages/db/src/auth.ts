@@ -2,7 +2,22 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
 import { nextCookies } from "better-auth/next-js";
 import { z } from "zod";
-import { getDb } from "./client";
+import { db } from "./client";
+
+const envSchema = z.object({
+  GITHUB_CLIENT_ID: z.string().min(1),
+  GITHUB_CLIENT_SECRET: z.string().min(1),
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  DISCORD_CLIENT_ID: z.string().min(1),
+  DISCORD_CLIENT_SECRET: z.string().min(1),
+});
+
+// NOTE: Undefined at Next.js build time, but still invoked during route enumeration
+const { data: env, error } = envSchema.safeParse(process.env);
+if (error) {
+  console.warn("Auth env validation failed:\n", z.prettifyError(error));
+}
 
 // NOTE: rate limiting — Better Auth's built-in rateLimit only applies to client-side API
 // routes (/api/auth/*). Server actions and server-side API routes bypass it entirely and
@@ -20,22 +35,9 @@ import { getDb } from "./client";
 //   1. Add a transactional email provider (e.g. Resend, Postmark)
 //   2. Set emailAndPassword.requireEmailVerification: true
 //   3. Implement emailAndPassword.sendVerificationEmail: async ({ user, url }) => { ... }
-const envSchema = z.object({
-  GITHUB_CLIENT_ID: z.string().min(1),
-  GITHUB_CLIENT_SECRET: z.string().min(1),
-  GOOGLE_CLIENT_ID: z.string().min(1),
-  GOOGLE_CLIENT_SECRET: z.string().min(1),
-  DISCORD_CLIENT_ID: z.string().min(1),
-  DISCORD_CLIENT_SECRET: z.string().min(1),
-});
-
-let env: z.infer<typeof envSchema> | undefined;
-
 export function getAuth(nextApp = false) {
-  env ??= envSchema.parse(process.env);
-
   return betterAuth({
-    database: drizzleAdapter(getDb(), {
+    database: drizzleAdapter(db, {
       provider: "pg",
     }),
     experimental: { joins: true },
@@ -52,16 +54,16 @@ export function getAuth(nextApp = false) {
     },
     socialProviders: {
       github: {
-        clientId: env.GITHUB_CLIENT_ID,
-        clientSecret: env.GITHUB_CLIENT_SECRET,
+        clientId: env?.GITHUB_CLIENT_ID ?? "",
+        clientSecret: env?.GITHUB_CLIENT_SECRET ?? "",
       },
       google: {
-        clientId: env.GOOGLE_CLIENT_ID,
-        clientSecret: env.GOOGLE_CLIENT_SECRET,
+        clientId: env?.GOOGLE_CLIENT_ID ?? "",
+        clientSecret: env?.GOOGLE_CLIENT_SECRET ?? "",
       },
       discord: {
-        clientId: env.DISCORD_CLIENT_ID,
-        clientSecret: env.DISCORD_CLIENT_SECRET,
+        clientId: env?.DISCORD_CLIENT_ID ?? "",
+        clientSecret: env?.DISCORD_CLIENT_SECRET ?? "",
       },
     },
     ...(nextApp && {
