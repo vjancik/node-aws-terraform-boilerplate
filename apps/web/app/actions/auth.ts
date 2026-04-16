@@ -1,15 +1,17 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { APIError } from "better-auth/api";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { validatePassword } from "@/lib/validation";
-import { APIError } from "better-auth/api";
 
-export type AuthState = {
-  errors?: string[];
-  email?: string;
-} | undefined;
+export type AuthState =
+  | {
+      errors?: string[];
+      email?: string;
+    }
+  | undefined;
 
 export async function signIn(
   _prev: AuthState,

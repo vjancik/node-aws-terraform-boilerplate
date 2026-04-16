@@ -3,15 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "exports": {
-    ".": "./src/index.ts"
+    "./auth": "./src/auth.ts",
+    "./client": "./src/client.ts",
+    "./schema": "./src/schema.ts"
   },
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "check": "biome check",
+    "fix": "biome check --write",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "better-auth": "catalog:",
+    "zod": "catalog:",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.5"
   },

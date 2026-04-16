@@ -4,13 +4,15 @@ packages:
 allowBuilds:
   '@nestjs/core': true
   esbuild: true
+  lefthook: true
   msw: true
   sharp: true
   unrs-resolver: true
 
 catalog:
   "@types/node": "^24"
-  better-auth: "^1.6.2"
+  better-auth: "^1.6.5"
   typescript: "^6"
+  zod: "^4.3.6"
 
 injectWorkspacePackages: true

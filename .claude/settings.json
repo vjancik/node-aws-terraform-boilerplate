@@ -1,9 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(pnpm dlx:*)",
-      "WebFetch(domain:better-auth.com)",
-      "Bash(pnpm --filter @repo/web add better-auth)"
-    ]
+    "allow": []
   }
 }

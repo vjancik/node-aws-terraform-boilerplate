@@ -1,7 +1,19 @@
-import { betterAuth } from 'better-auth/minimal';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { nextCookies } from 'better-auth/next-js';
-import { db } from './client';
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { betterAuth } from "better-auth/minimal";
+import { nextCookies } from "better-auth/next-js";
+import { z } from "zod";
+import { db } from "./client";
+
+const env = z
+  .object({
+    GITHUB_CLIENT_ID: z.string().min(1),
+    GITHUB_CLIENT_SECRET: z.string().min(1),
+    GOOGLE_CLIENT_ID: z.string().min(1),
+    GOOGLE_CLIENT_SECRET: z.string().min(1),
+    DISCORD_CLIENT_ID: z.string().min(1),
+    DISCORD_CLIENT_SECRET: z.string().min(1),
+  })
+  .parse(process.env);
 
 // NOTE: rate limiting — Better Auth's built-in rateLimit only applies to client-side API
 // routes (/api/auth/*). Server actions and server-side API routes bypass it entirely and
@@ -19,10 +31,10 @@ import { db } from './client';
 //   1. Add a transactional email provider (e.g. Resend, Postmark)
 //   2. Set emailAndPassword.requireEmailVerification: true
 //   3. Implement emailAndPassword.sendVerificationEmail: async ({ user, url }) => { ... }
-export function getAuth(nextApp: boolean = false) {
+export function getAuth(nextApp = false) {
   return betterAuth({
     database: drizzleAdapter(db, {
-      provider: 'pg',
+      provider: "pg",
     }),
     experimental: { joins: true },
     emailAndPassword: {
@@ -38,16 +50,16 @@ export function getAuth(nextApp: boolean = false) {
     },
     socialProviders: {
       github: {
-        clientId: process.env.GITHUB_CLIENT_ID!,
-        clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+        clientId: env.GITHUB_CLIENT_ID,
+        clientSecret: env.GITHUB_CLIENT_SECRET,
       },
       google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientId: env.GOOGLE_CLIENT_ID,
+        clientSecret: env.GOOGLE_CLIENT_SECRET,
       },
       discord: {
-        clientId: process.env.DISCORD_CLIENT_ID!,
-        clientSecret: process.env.DISCORD_CLIENT_SECRET!,
+        clientId: env.DISCORD_CLIENT_ID,
+        clientSecret: env.DISCORD_CLIENT_SECRET,
       },
     },
     ...(nextApp && {

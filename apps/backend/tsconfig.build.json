@@ -1,9 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "strictNullChecks": true
   },
   "exclude": ["node_modules", "dist", "src/**/*.spec.ts"]

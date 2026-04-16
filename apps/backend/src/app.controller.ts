@@ -1,31 +1,31 @@
-import { Controller, Get, All, Param } from '@nestjs/common';
-import { runFibWorker } from './fib.pool';
+import { All, Controller, Get, Param } from "@nestjs/common";
+import { runFibWorker } from "./fib.pool";
 
 @Controller()
 export class AppController {
-  @Get('fib/:n')
-  async fibonacci(@Param('n') n: string): Promise<string> {
-    const num = Math.min(parseInt(n, 10), 42);
+  @Get("fib/:n")
+  async fibonacci(@Param("n") n: string): Promise<string> {
+    const num = Math.min(Number.parseInt(n, 10), 42);
     return String(await runFibWorker(num));
   }
 
-  @Get('livez')
+  @Get("livez")
   livez(): string {
-    return 'Ok';
+    return "Ok";
   }
 
-  @Get('readyz')
+  @Get("readyz")
   readyz(): string {
-    return 'Ok';
+    return "Ok";
   }
 
   @All()
   root(): string {
-    return 'Ok';
+    return "Ok";
   }
 
-  @All('*path')
+  @All("*path")
   rootWildcard(): string {
-    return 'Ok';
+    return "Ok";
   }
 }

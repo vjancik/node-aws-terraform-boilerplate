@@ -7,5 +7,22 @@
     "ultracite/biome/nestjs",
     "ultracite/biome/vitest",
     "ultracite/biome/jest"
-  ]
+  ],
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/.next",
+      "!**/out",
+      "!**/build",
+      "!**/dist",
+      "!terraform/**/*.json",
+      "!scripts/load-testing/results"
+    ]
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    }
+  }
 }

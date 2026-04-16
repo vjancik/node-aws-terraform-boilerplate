@@ -1,4 +1,5 @@
-export * from './auth-schema';
+// biome-ignore lint/performance/noBarrelFile: intentional package schema aggregator
+export * from "./auth-schema";
 
 // Define your application tables here.
 // Example:

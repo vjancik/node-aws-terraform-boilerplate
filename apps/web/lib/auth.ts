@@ -1,3 +1,3 @@
-import { getAuth } from "@repo/db";
+import { getAuth } from "@repo/db/auth";
 
 export const auth = getAuth(true);

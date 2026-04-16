@@ -1,17 +1,23 @@
-import Link from "next/link"
-import Image from "next/image"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { getUser } from "@/lib/dal"
-import { signOut } from "@/app/actions/auth"
-import { ModeToggle } from "@/components/mode-toggle"
+import Image from "next/image";
+import Link from "next/link";
+import { signOut } from "@/app/actions/auth";
+import { ModeToggle } from "@/components/mode-toggle";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { getUser } from "@/lib/dal";
 
 export default async function NavBar() {
-  const user = await getUser()
+  const user = await getUser();
 
   return (
     <nav className="flex items-center justify-between px-6 py-4">
-      <Link href="/" className="flex items-center gap-2 font-semibold">
-        <Image src="/vercel.svg" alt="Vercel logo" width={24} height={24} className="invert dark:invert-0" />
+      <Link className="flex items-center gap-2 font-semibold" href="/">
+        <Image
+          alt="Vercel logo"
+          className="invert dark:invert-0"
+          height={24}
+          src="/vercel.svg"
+          width={24}
+        />
         Example Inc.
       </Link>
       <div className="flex items-center gap-2">
@@ -22,15 +28,23 @@ export default async function NavBar() {
               <span className="text-muted-foreground">{user.email}</span>
             </div>
             <form action={signOut}>
-              <Button variant="outline" type="submit">Sign Out</Button>
+              <Button type="submit" variant="outline">
+                Sign Out
+              </Button>
             </form>
           </>
         ) : (
           <>
-            <Link href="/signup" className={buttonVariants({ variant: "outline" })}>
+            <Link
+              className={buttonVariants({ variant: "outline" })}
+              href="/signup"
+            >
               Sign Up
             </Link>
-            <Link href="/login" className={buttonVariants({ variant: "default" })}>
+            <Link
+              className={buttonVariants({ variant: "default" })}
+              href="/login"
+            >
               Sign In
             </Link>
           </>
@@ -38,5 +52,5 @@ export default async function NavBar() {
         <ModeToggle />
       </div>
     </nav>
-  )
+  );
 }
