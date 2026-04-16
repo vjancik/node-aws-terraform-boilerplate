@@ -77,6 +77,13 @@ terraform/
 pnpm install
 ```
 
+### Development Setup
+
+```bash
+# setup pre-commit hooks for development
+pnpm lefthook install
+```
+
 ## Commands
 
 All commands should be run from the **monorepo root** using `pnpm`. Turborepo orchestrates tasks across all packages, handling caching and ordering automatically.

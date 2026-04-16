@@ -16,8 +16,7 @@
     "compose:up": "docker compose -f docker-compose.local.yaml up --build -d --wait",
     "compose:down": "docker compose -f docker-compose.local.yaml down",
     "check": "ultracite check",
-    "fix": "ultracite fix",
-    "prepare": "lefthook install"
+    "fix": "ultracite fix"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.12",
