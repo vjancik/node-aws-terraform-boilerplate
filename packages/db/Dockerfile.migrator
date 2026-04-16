@@ -1,7 +1,5 @@
-# syntax=docker/dockerfile:1
-
-ARG TARGETARCH
 FROM node:24-alpine AS migrator
+ARG TARGETARCH
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
