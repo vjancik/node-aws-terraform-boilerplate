@@ -1,6 +1,7 @@
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
 import { nextCookies } from "better-auth/next-js";
+import { openAPI } from "better-auth/plugins";
 import { z } from "zod";
 import { db } from "./client";
 
@@ -35,7 +36,7 @@ if (error) {
 //   1. Add a transactional email provider (e.g. Resend, Postmark)
 //   2. Set emailAndPassword.requireEmailVerification: true
 //   3. Implement emailAndPassword.sendVerificationEmail: async ({ user, url }) => { ... }
-export function getAuth(nextApp = false) {
+export function getAuth(nextApp = false, generateDocs = false) {
   return betterAuth({
     database: drizzleAdapter(db, {
       provider: "pg",
@@ -66,8 +67,9 @@ export function getAuth(nextApp = false) {
         clientSecret: env?.DISCORD_CLIENT_SECRET ?? "",
       },
     },
-    ...(nextApp && {
-      plugins: [nextCookies()],
-    }),
+    plugins: [
+      ...(nextApp ? [nextCookies()] : []),
+      ...(generateDocs ? [openAPI()] : []),
+    ],
   });
 }
