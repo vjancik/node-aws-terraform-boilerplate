@@ -8,8 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "analyze-bundle": "next experimental-analyze",
-    "lint": "eslint",
-    "lint:fix": "eslint --fix"
+    "check": "biome check",
+    "fix": "biome check --write"
   },
   "dependencies": {
     "@repo/db": "workspace:*",
@@ -39,9 +39,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "^1.0.0",
-    "eslint": "^9.39.4",
-    "eslint-config-next": "16.2.3",
-    "tailwindcss": "^4",
+"tailwindcss": "^4",
     "typescript": "catalog:"
   }
 }
