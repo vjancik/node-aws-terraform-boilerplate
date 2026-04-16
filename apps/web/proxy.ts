@@ -10,16 +10,17 @@ export async function proxy(request: NextRequest) {
   const sessionCookie = getSessionCookie(request)
 
   if (GUEST_ONLY_URLS.includes(pathname) && sessionCookie) {
-    return NextResponse.redirect(new URL("/", request.url))
+    return NextResponse.redirect(new URL("/", request.nextUrl))
   }
 
   if (AUTHENTICATED_ONLY_URLS.some(url => pathname.startsWith(url)) && !sessionCookie) {
-    return NextResponse.redirect(new URL("/login", request.url))
+    return NextResponse.redirect(new URL("/login", request.nextUrl))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ["/login", "/signup", "/dashboard/:path*"],
+  // matcher: ["/login", "/signup", "/dashboard/:path*"],
+  matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
 }
