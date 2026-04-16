@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/db/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/db-migrator.yml'
+      - "packages/db/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/db-migrator.yml"
 
 permissions:
-  id-token: write   # required for OIDC
+  id-token: write # required for OIDC
   contents: read
 
 env:

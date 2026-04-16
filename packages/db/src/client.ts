@@ -4,12 +4,15 @@ import { z } from "zod";
 // biome-ignore lint/performance/noNamespaceImport: we always want all of them in this use-case
 import * as schema from "./schema";
 
-const { DATABASE_URL } = z
-  .object({
-    DATABASE_URL: z.string().min(1),
-  })
-  .parse(process.env);
+const envSchema = z.object({ DATABASE_URL: z.string().min(1) });
 
-const client = postgres(DATABASE_URL);
+// Lazy singleton — defers env validation to first call so Next.js build doesn't
+// require DATABASE_URL at static analysis time.
+let env: z.infer<typeof envSchema> | undefined;
+let db: ReturnType<typeof drizzle<typeof schema>> | undefined;
 
-export const db = drizzle({ client, schema });
+export function getDb() {
+  env ??= envSchema.parse(process.env);
+  db ??= drizzle({ client: postgres(env.DATABASE_URL), schema });
+  return db;
+}

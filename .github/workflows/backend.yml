@@ -4,14 +4,15 @@ on:
   push:
     branches: [main]
     paths:
-      - 'apps/backend/**'
-      - 'helm/backend/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.github/workflows/backend.yml'
+      - "packages/db/**"
+      - "apps/backend/**"
+      - "helm/backend/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/backend.yml"
 
 permissions:
-  id-token: write   # required for OIDC
+  id-token: write # required for OIDC
   contents: read
 
 env:

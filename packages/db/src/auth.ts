@@ -2,18 +2,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
 import { nextCookies } from "better-auth/next-js";
 import { z } from "zod";
-import { db } from "./client";
-
-const env = z
-  .object({
-    GITHUB_CLIENT_ID: z.string().min(1),
-    GITHUB_CLIENT_SECRET: z.string().min(1),
-    GOOGLE_CLIENT_ID: z.string().min(1),
-    GOOGLE_CLIENT_SECRET: z.string().min(1),
-    DISCORD_CLIENT_ID: z.string().min(1),
-    DISCORD_CLIENT_SECRET: z.string().min(1),
-  })
-  .parse(process.env);
+import { getDb } from "./client";
 
 // NOTE: rate limiting — Better Auth's built-in rateLimit only applies to client-side API
 // routes (/api/auth/*). Server actions and server-side API routes bypass it entirely and
@@ -31,9 +20,22 @@ const env = z
 //   1. Add a transactional email provider (e.g. Resend, Postmark)
 //   2. Set emailAndPassword.requireEmailVerification: true
 //   3. Implement emailAndPassword.sendVerificationEmail: async ({ user, url }) => { ... }
+const envSchema = z.object({
+  GITHUB_CLIENT_ID: z.string().min(1),
+  GITHUB_CLIENT_SECRET: z.string().min(1),
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  DISCORD_CLIENT_ID: z.string().min(1),
+  DISCORD_CLIENT_SECRET: z.string().min(1),
+});
+
+let env: z.infer<typeof envSchema> | undefined;
+
 export function getAuth(nextApp = false) {
+  env ??= envSchema.parse(process.env);
+
   return betterAuth({
-    database: drizzleAdapter(db, {
+    database: drizzleAdapter(getDb(), {
       provider: "pg",
     }),
     experimental: { joins: true },
